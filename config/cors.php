@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['https://portal.sokotopalliativeshop.com.ng'], // Your frontend URL
+    'allowed_origins' => ['*'], // Your frontend URL
 
     'allowed_origins_patterns' => [],
 
