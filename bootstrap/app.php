@@ -17,7 +17,7 @@ $app = new Illuminate\Foundation\Application(
     $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
 );
 
-// $app->withMiddleware(function (Middleware $middleware) {
+// ->withMiddleware(function (Middleware $middleware) {
 //     $middleware->appendToGroup('api', \Illuminate\Http\Middleware\HandleCors::class);
 // });
 /*

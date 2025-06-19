@@ -28,7 +28,7 @@ use App\Http\Controllers\UsersController;
 //     return $request->user();
 // });
 
-Route::middleware(['cors'])->group(function () {
+// Route::middleware(['cors'])->group(function () {
     // Public routes
     Route::post('/users/register', [AuthController::class, 'register']);
     Route::post('/users/login', [AuthController::class, 'login']);
@@ -82,4 +82,4 @@ Route::middleware(['cors'])->group(function () {
         Route::post('/enrollees', [EnrolleesController::class, 'store']);
         Route::get('/enrollees/types', [EnrolleesController::class, 'enrolleeTypes']);
     });
-});
+// });
