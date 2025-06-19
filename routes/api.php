@@ -23,10 +23,6 @@ use App\Http\Controllers\UsersController;
 |
 */
 
-// Remove Sanctum route if not using Sanctum
-// Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-//     return $request->user();
-// });
 
 // Route::middleware(['cors'])->group(function () {
     // Public routes
