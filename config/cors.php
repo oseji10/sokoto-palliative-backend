@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*', 'http://localhost:3000', 'https://portal.sokotopalliativeshop.com.ng'],
+    'allowed_origins' => ['*', 'https://portal.sokotopalliativeshop.com.ng'], // Your frontend URL
 
     'allowed_origins_patterns' => [],
 
