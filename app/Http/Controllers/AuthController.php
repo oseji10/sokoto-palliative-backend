@@ -46,7 +46,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'username' => 'required', // Can be email or phone number
+            'username' => 'required',
             'password' => 'required',
         ]);
 
@@ -55,52 +55,45 @@ class AuthController extends Controller
                     ->orWhere('phoneNumber', $request->username)
                     ->first();
 
-        // If user is not found, return a custom error message
         if (!$user) {
             throw ValidationException::withMessages([
                 'username' => ['No account found with this email or phone number.'],
             ]);
         }
 
-        // Check password and attempt JWT authentication
+        // Attempt JWT authentication
         $credentials = [
-            'email' => $user->email, // Use the found user's email
+            'email' => $user->email,
             'password' => $request->password,
         ];
 
-        if (!$accessToken = $this->jwt->attempt($credentials)) {
+        if (!$accessToken = auth('api')->attempt($credentials)) {
             return response()->json(['error' => 'Invalid credentials'], 401);
         }
 
         // Generate refresh token
         $refreshToken = Str::random(64);
-        $user = auth()->user();
+        $user = auth('api')->user();
 
         // Store refresh token in database
         RefreshToken::create([
             'user_id' => $user->id,
             'token' => $refreshToken,
-            'expires_at' => Carbon::now()->addDays(14), 
+            'expires_at' => Carbon::now()->addDays(14),
         ]);
 
-        // Hide password and other sensitive data
+        // Hide sensitive data
         $user->makeHidden(['password']);
 
-        // Return user and JWT token
-        // return response()->json([
-        //     'user' => $user,
-        //     'token' => $token,
-        // ]);
+        // Return response with cookies
         return response()->json([
             'message' => 'Logged in',
             'user' => $user,
             'access_token' => $accessToken,
-            ])
+        ])
             ->cookie('access_token', $accessToken, 15, null, null, true, true, false, 'strict')
             ->cookie('refresh_token', $refreshToken, 14 * 24 * 60, null, null, true, true, false, 'strict');
     }
-
-
 
     public function refresh(Request $request)
     {
