@@ -1,5 +1,6 @@
 <?php
-
+use Illuminate\Http\Middleware\HandleCors;
+use Illuminate\Foundation\Configuration\Middleware;
 /*
 |--------------------------------------------------------------------------
 | Create The Application
@@ -11,10 +12,14 @@
 |
 */
 
+
 $app = new Illuminate\Foundation\Application(
     $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
 );
 
+// $app->withMiddleware(function (Middleware $middleware) {
+//     $middleware->appendToGroup('api', \Illuminate\Http\Middleware\HandleCors::class);
+// });
 /*
 |--------------------------------------------------------------------------
 | Bind Important Interfaces

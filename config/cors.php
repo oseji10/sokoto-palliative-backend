@@ -19,9 +19,16 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'], // Your frontend URL
+    'allowed_origins'   => [
+        'https://portal.sokotopalliativeshop.com.ng',
+        'http://localhost:3000',
+        
+    ],// Your frontend URL
 
-    'allowed_origins_patterns' => [],
+    // 'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '/^https?:\/\/([a-z0-9-]+\.)?portal.sokotopalliativeshop\.com.ng$/',
+    ],
 
     'allowed_headers' => ['*'],
 
