@@ -5,8 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
+use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,35 +13,44 @@ class VerifyJwtToken
 {
     public function handle(Request $request, Closure $next)
     {
+        // Allow OPTIONS requests for CORS preflight
+        if ($request->getMethod() === 'OPTIONS') {
+            return $next($request);
+        }
+
+        // Get token from cookie
         $token = $request->cookie('access_token');
 
         if (!$token) {
+            \Log::warning('No access_token cookie found');
             return response()->json(['message' => 'Unauthorized - No token'], 401);
         }
 
+        try {
+            // Parse and authenticate token using tymon/jwt-auth
+            $user = JWTAuth::setToken($token)->authenticate();
+            if (!$user) {
+                \Log::warning('User not found for token');
+                return response()->json(['message' => 'User not found'], 404);
+            }
 
-// Inside the handle() method:
-try {
-    $decoded = JWT::decode($token, new Key(env('JWT_SECRET'), 'HS256'));
+            // Log in user for the request
+            Auth::login($user);
 
-    // Example assumes `sub` holds the user ID
-    $userId = $decoded->sub;
-    $user = User::find($userId);
+            // Optionally attach payload to request
+            $payload = JWTAuth::payload();
+            $request->merge(['jwt_payload' => (array) $payload]);
 
-    if (!$user) {
-        return response()->json(['message' => 'User not found'], 404);
-    }
-
-    // ✅ Manually log in the user for the current request
-    Auth::login($user);
-
-    // Optionally attach payload to request if needed
-    $request->merge(['jwt_payload' => (array) $decoded]);
-
-} catch (\Exception $e) {
-    return response()->json(['message' => 'Unauthorized - Invalid token'], 401);
-}
-
+        } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+            \Log::error('Token expired: ' . $e->getMessage());
+            return response()->json(['message' => 'Token expired'], 401);
+        } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+            \Log::error('Invalid token: ' . $e->getMessage());
+            return response()->json(['message' => 'Invalid token'], 401);
+        } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+            \Log::error('JWT error: ' . $e->getMessage());
+            return response()->json(['message' => 'Unauthorized - Token error'], 401);
+        }
 
         return $next($request);
     }
