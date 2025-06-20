@@ -11,7 +11,8 @@ use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\RolesController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\UsersController;
-
+use App\Http\Controllers\MinistryController;
+use App\Http\Controllers\CadreController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -52,12 +53,30 @@ use App\Http\Controllers\UsersController;
         Route::put('/diseases/{cancerId}/edit', [CancerController::class, 'edit']);
         Route::delete('/diseases/{cancerId}/delete', [CancerController::class, 'destroy']);
 
+        // Ministries routes
+        Route::get('/ministries', [MinistryController::class, 'index']);
+        Route::get('/ministries/{ministryId}', [MinistryController::class, 'show']);
+        Route::post('/ministries', [MinistryController::class, 'store']);
+        Route::put('/ministries/{ministryId}/edit', [MinistryController::class, 'update']);
+        Route::delete('/ministries/{ministryId}/delete', [MinistryController::class, 'destroy']);
+
+        // Cadres routes
+        Route::get('/cadres', [CadreController::class, 'index']);
+        Route::get('/cadres/{cadreId}', [CadreController::class, 'show']);
+        Route::post('/cadres', [CadreController::class, 'store']);
+        Route::put('/cadres/{cadreId}/edit', [CadreController::class, 'update']);
+        Route::delete('/cadres/{cadreId}/delete', [CadreController::class, 'destroy']);
+
         // Product routes
         Route::get('/products', [ProductsController::class, 'index']);
         Route::post('/products', [ProductsController::class, 'store']);
         Route::put('/products/{productId}/edit', [ProductsController::class, 'edit']);
         Route::delete('/products/{productId}/delete', [ProductsController::class, 'destroy']);
         Route::get('/products/types', [ProductsController::class, 'productTypes']);
+        Route::get('/products/{productId}', [ProductsController::class, 'show']);
+        Route::post('/products/add-product-image', [ProductsController::class, 'addProductImage']);
+        
+        Route::get('/products/{productId}/images', [ProductsController::class, 'getProductImages']);
 
         // Location and contact routes
         Route::get('/locations', [StateController::class, 'index']);
@@ -77,6 +96,9 @@ use App\Http\Controllers\UsersController;
         Route::get('/beneficiaries', [BeneficiariesController::class, 'index']);
         Route::post('/beneficiaries', [BeneficiariesController::class, 'store']);
         Route::get('/beneficiaries/types', [BeneficiariesController::class, 'beneficiaryTypes']);
+        Route::get('/beneficiaries/{id}', [BeneficiariesController::class, 'show']);
+        Route::put('/beneficiaries/{id}/edit', [BeneficiariesController::class, 'update']);
+        Route::delete('/beneficiaries/{id}/delete', [BeneficiariesController::class, 'destroy']);
 
         Route::post('/staff', [UsersController::class, 'store']);
         Route::delete('/staff/{id}/delete', [UsersController::class, 'destroy']);

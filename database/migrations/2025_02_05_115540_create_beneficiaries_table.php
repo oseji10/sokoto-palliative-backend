@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('beneficiaries', function (Blueprint $table) {
             $table->id('beneficiaryId');
-            $table->string('governmentId')->nullable();
+            $table->string('employeeId')->nullable();
             $table->string('firstName')->nullable();
             $table->string('lastName')->nullable();
             $table->string('otherNames')->nullable();
@@ -22,18 +22,20 @@ return new class extends Migration
             $table->unsignedBigInteger('cadre')->nullable();
             $table->unsignedBigInteger('lga')->nullable();
             $table->unsignedBigInteger('beneficiaryType')->nullable();
+            $table->unsignedBigInteger('ministry')->nullable();
             $table->unsignedBigInteger('enrolledBy')->nullable();
 
-            $table->foreign('lga')->references('lgaId')->on('lgas')->onDelete('cascade');
+            
             $table->string('isActive')->default('true');
             
             $table->timestamps();
-            $table->softDeletes();
+            $table->softDeletes();  
 
             $table->foreign('beneficiaryType')->references('typeId')->on('beneficiary_type')->onDelete('cascade');
             $table->foreign('enrolledBy')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('cadre')->references('cadreId')->on('cadre')->onDelete('cascade');
-            
+            $table->foreign('cadre')->references('cadreId')->on('cadres')->onDelete('cascade');
+            $table->foreign('ministry')->references('ministryId')->on('ministries')->onDelete('cascade');
+            $table->foreign('lga')->references('lgaId')->on('lgas')->onDelete('cascade');
         });
     }
 

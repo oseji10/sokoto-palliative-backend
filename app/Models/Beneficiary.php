@@ -17,10 +17,13 @@ class Beneficiary extends Model
         'otherNames',
         'phoneNumber',
         'email',
-        'enrolleeType',
         'enrolledBy',
         'lga',
         'isActive',
+        'cadre',
+        'beneficiaryType',
+        'ministry',
+        'employeeId',
     ];
     protected $primaryKey = 'beneficiaryId';
 
@@ -37,5 +40,15 @@ class Beneficiary extends Model
     public function lga_info()
     {
         return $this->belongsTo(Lgas::class, 'lga', 'lgaId');
+    }
+
+    public function cadre_info()
+    {
+        return $this->belongsTo(Cadre::class, 'cadre', 'cadreId');
+    }
+
+    public function ministry_info()
+    {
+        return $this->belongsTo(Ministry::class, 'ministry', 'ministryId');
     }
 }

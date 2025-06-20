@@ -10,7 +10,7 @@ class BeneficiariesController extends Controller
 {
     public function index()
     {
-        $beneficiaries = Beneficiary::with('enrolled_by', 'beneficiary_type', 'lga_info')->get();
+        $beneficiaries = Beneficiary::with('enrolled_by', 'beneficiary_type', 'lga_info', 'cadre_info', 'ministry_info')->get();
         return response()->json($beneficiaries);
 
     }
@@ -31,6 +31,9 @@ class BeneficiariesController extends Controller
         'phoneNumber' => 'nullable|string|max:20',
         'email' => 'nullable|email|max:255|unique:beneficiaries,email',
         'beneficiaryType' => 'required|integer|exists:beneficiary_type,typeId',
+        'ministry' => 'nullable|integer|exists:ministries,ministryId',
+        'cadre' => 'nullable|integer|exists:cadres,cadreId',
+        'employeeId' => 'nullable|string|max:255',
     ]);
 
     // Get the authenticated staff
@@ -51,16 +54,88 @@ class BeneficiariesController extends Controller
     $beneficiary = Beneficiary::create($data);
     // $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info']);
 
-    $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info']);
+    $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info', 'cadre_info', 'ministry_info']);
     return response()->json([
         'beneficiaryId' => $beneficiary->beneficiaryId,
+        'employeeId' => $beneficiary->employeeId,
         'firstName' => $beneficiary->firstName,
         'lastName' => $beneficiary->lastName,
         'otherNames' => $beneficiary->otherNames,
         'phoneNumber' => $beneficiary->phoneNumber,
         'email' => $beneficiary->email,
+        'lga' => $beneficiary->lga_info ? $beneficiary->lga_info->lgaName : null,
+        'ministry' => $beneficiary->ministry_info ? $beneficiary->ministry_info->ministryName : null,
+        'cadre' => $beneficiary->cadre_info ? $beneficiary->cadre_info->cadreName : null,
         'beneficiaryType' => $beneficiary->beneficiary_type->typeName,
         'enrolledBy' => $beneficiary->enrolled_by->firstName . ' ' . $beneficiary->enrolled_by->lastName,
     ], 201);
+}
+
+public function show($beneficiaryId)
+{
+    $beneficiary = Beneficiary::find($beneficiaryId);
+    if (!$beneficiary) {
+        return response()->json(['message' => 'Beneficiary not found'], 404);
+    }
+    $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info']);
+    return response()->json($beneficiary);
+
+    $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info']);
+}
+
+
+
+public function update(Request $request, $beneficiaryId)
+{
+    $beneficiary = Beneficiary::find($beneficiaryId);
+    if (!$beneficiary) {
+        return response()->json(['message' => 'Beneficiary not found'], 404);
+    }
+
+    // Validate the request data
+    $validatedData = $request->validate([
+        'firstName' => 'required|string|max:255',
+        'lastName' => 'required|string|max:255',
+        'otherNames' => 'nullable|string|max:255',
+        'phoneNumber' => 'nullable|string|max:20',
+        'email' => 'nullable|email|max:255|unique:beneficiaries,email,' . $beneficiary->beneficiaryId,
+        'beneficiaryType' => 'required|integer|exists:beneficiary_type,typeId',
+        'ministry' => 'nullable|integer|exists:ministries,ministryId',
+        'cadre' => 'nullable|integer|exists:cadres,cadreId',
+        'employeeId' => 'nullable|string|max:255',
+    ]);
+
+    // Update the beneficiary
+    $beneficiary->update($validatedData);
+    $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info', 'cadre_info', 'ministry_info']);
+
+    return response()->json([
+        'message' => "Beneficiary successfully updated",
+        'beneficiaryId' => $beneficiary->beneficiaryId,
+        'employeeId' => $beneficiary->employeeId,
+        'firstName' => $beneficiary->firstName,
+        'lastName' => $beneficiary->lastName,
+        'otherNames' => $beneficiary->otherNames,
+        'phoneNumber' => $beneficiary->phoneNumber,
+        'email' => $beneficiary->email,
+        'lga' => $beneficiary->lga_info ? $beneficiary->lga_info->lgaName : null,
+        'ministry' => $beneficiary->ministry_info ? $beneficiary->ministry_info->ministryName : null,
+        'cadre' => $beneficiary->cadre_info ? $beneficiary->cadre_info->cadreName : null,
+        'beneficiaryType' => $beneficiary->beneficiary_type->typeName,
+        'enrolledBy' => $beneficiary->enrolled_by->firstName . ' ' . $beneficiary->enrolled_by->lastName,
+    ], 200);
+}
+
+public function destroy($beneficiaryId)
+{
+    $beneficiary = Beneficiary::find($beneficiaryId);
+    if (!$beneficiary) {
+        return response()->json(['message' => 'Beneficiary not found'], 404);
+    }
+
+    // Soft delete the beneficiary
+    $beneficiary->delete();
+
+    return response()->json(['message' => 'Beneficiary deleted successfully'], 200);
 }
 }

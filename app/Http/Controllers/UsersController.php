@@ -103,7 +103,7 @@ class UsersController extends Controller
         'email' => $user->email,
         'staffType' => $staff->staff_type->typeName,
         'lga' => $staff->lga_info->lgaName,
-        'supervisor' => $staff->supervisor ? $staff->supervisor->firstName . ' ' . $staff->supervisor->lastName : null,
+        'supervisor' => $staff->supervisor_info ? $staff->supervisor_info->firstName . ' ' . $staff->supervisor_info->lastName : null,
     ], 201);
 }
 

@@ -11,15 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cadres', function (Blueprint $table) {
-            $table->id('cadreId');
-            $table->string('cadreName')->nullable();
-            $table->string('salary')->nullable();
-            
-            $table->string('status')->nullable();
+        Schema::create('ministries', function (Blueprint $table) {
+            $table->id('ministryId');
+            $table->string('ministryName')->nullable();
             $table->timestamps();
-
-            
         });
     }
 

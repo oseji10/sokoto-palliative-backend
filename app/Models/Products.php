@@ -28,6 +28,12 @@ class Products extends Model
     {
         return $this->belongsTo(User::class, 'addedBy', 'id'); // Assuming addedBy is the foreign key
     }
+
+    public function product_images()
+    {
+        return $this->belongsTo(ProductImage::class, 'productId', 'productId'); // Assuming productId is the foreign key in ProductImage
+    }
+
     protected $hidden = ['deleted_at'];
    
 }
