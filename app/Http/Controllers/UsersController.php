@@ -6,6 +6,11 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Staff; 
 use App\Models\StaffType;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use App\Mail\WelcomeEmail;
+use Illuminate\Support\Facades\Mail;
 class UsersController extends Controller
 {
     public function index()
@@ -19,7 +24,7 @@ class UsersController extends Controller
 {
     $users = User::with('staff.staff_type')
         ->whereHas('staff', function ($query) {
-            $query->where('staffType', 2);
+            $query->where('staffType', 3);
         })
         ->get();
 
@@ -36,14 +41,68 @@ class UsersController extends Controller
 
     public function store(Request $request)
     {
-        // Directly get the data from the request
-        $data = $request->all();
     
-        // Create a new user with the data (ensure that the fields are mass assignable in the model)
-        $roles = Roles::create($data);
+        $validatedData = $request->validate([
+        'firstName' => 'required|string|max:255',
+        'lastName' => 'required|string|max:255',
+        'otherNames' => 'nullable|string|max:255',
+        'phoneNumber' => 'nullable|string|max:20',
+        'email' => 'nullable|email|max:255|unique:users,email',
+        'staff.staffType' => 'required|integer|exists:staff_type,typeId',
+        'staff.lga' => 'required|integer|exists:lgas,lgaId',
+    ]);
+
+    $default_password = strtoupper(Str::random(2)) . mt_rand(1000000000, 9999999999);
+
+    // Create user
+    $user = User::create([
+        'firstName' => $request->firstName,
+        'lastName' => $request->lastName,
+        'phoneNumber' => $request->phoneNumber,
+        'email' => $request->email,
+        'password' => Hash::make($default_password),
+        'role' => 2,
+    ]);
+
+
     
-        // Return a response, typically JSON
-        return response()->json($roles, 201); // HTTP status code 201: Created
+    $data = array_merge($validatedData, [
+        'userId' => $user->id,
+        'effectiveFrom' => now(),
+        'isActive' => 'true',
+        'effectiveUntil' => null,
+        'supervisor' => $request->staff['supervisor'] ?? null, // Optional
+        'lga' => $request->staff['lga'], // Ensure this is set correctly
+        'staffType' => $request->staff['staffType'], // Ensure this is set correctly
+    ]); 
+    $staff = Staff::create($data);
+    Log::info('User created:', ['email' => $user->email]);
+
+    // Send email
+    try {
+        Mail::to($user->email)->send(new WelcomeEmail($user->firstName, $user->lastName, $user->email, $default_password));
+        Log::info('Email sent successfully to ' . $user->email);
+    } catch (\Exception $e) {
+        Log::error('Email sending failed: ' . $e->getMessage());
     }
+
+    // Return response
+      
+    $staff->load('staff_type', 'lga_info', 'supervisor_info');
+    return response()->json([
+        'message' => "User successfully created",
+        'password' => $default_password,
+        'staffId' => $staff->staffId,
+        'firstName' => $user->firstName,
+        'lastName' => $user->lastName,
+        'otherNames' => $user->otherNames,
+        'phoneNumber' => $user->phoneNumber,
+        'email' => $user->email,
+        'staffType' => $staff->staff_type->typeName,
+        'lga' => $staff->lga_info->lgaName,
+        'supervisor' => $staff->supervisor ? $staff->supervisor->firstName . ' ' . $staff->supervisor->lastName : null,
+    ], 201);
+}
+
     
 }

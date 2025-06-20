@@ -26,4 +26,15 @@ class Staff extends Model
     {
         return $this->belongsTo(StaffType::class, 'staffType', 'typeId');
     } 
+
+    public function lga_info()
+    {
+        return $this->belongsTo(Lgas::class, 'lga', 'lgaId');
+    }
+
+    public function supervisor_info()
+    {
+        return $this->belongsTo(User::class, 'supervisor', 'id');
+    }
+    
 }

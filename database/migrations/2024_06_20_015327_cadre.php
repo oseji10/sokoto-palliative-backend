@@ -11,12 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('beneficiary_type', function (Blueprint $table) {
-            $table->id('typeId');
-            $table->string('typeName')->nullable();
-            $table->string('billingSetting')->nullable();
+        Schema::create('cadre', function (Blueprint $table) {
+            $table->id('cadreId');
+            $table->string('cadreName')->nullable();
+            $table->string('salary')->nullable();
+            
+            $table->string('status')->nullable();
             $table->timestamps();
-            $table->softDeletes();
+
+            
         });
     }
 

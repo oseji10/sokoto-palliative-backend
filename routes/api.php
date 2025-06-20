@@ -4,7 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CancerController;
-use App\Http\Controllers\EnrolleesController;
+use App\Http\Controllers\BeneficiariesController;
 use App\Http\Controllers\HospitalController;
 use App\Http\Controllers\LgaController;
 use App\Http\Controllers\ProductsController;
@@ -71,11 +71,13 @@ use App\Http\Controllers\UsersController;
         Route::get('/users', [UsersController::class, 'index']);
         Route::get('/supervisors', [UsersController::class, 'supervisors']);
         Route::get('/lgas', [LgaController::class, 'index']);
-        Route::get('/staff-types', [UsersController::class, 'staff_type']);
+        Route::get('/staff/types', [UsersController::class, 'staff_type']);
 
-        // Enrollee routes
-        Route::get('/enrollees', [EnrolleesController::class, 'index']);
-        Route::post('/enrollees', [EnrolleesController::class, 'store']);
-        Route::get('/enrollees/types', [EnrolleesController::class, 'enrolleeTypes']);
+        // Beneficiary routes
+        Route::get('/beneficiaries', [BeneficiariesController::class, 'index']);
+        Route::post('/beneficiaries', [BeneficiariesController::class, 'store']);
+        Route::get('/beneficiaries/types', [BeneficiariesController::class, 'beneficiaryTypes']);
+
+        Route::post('/staff', [UsersController::class, 'store']);
     });
 // });

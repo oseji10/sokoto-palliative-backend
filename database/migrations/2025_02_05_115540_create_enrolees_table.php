@@ -11,16 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('enrollees', function (Blueprint $table) {
-            $table->id('enrolleeId');
+        Schema::create('beneficiaries', function (Blueprint $table) {
+            $table->id('beneficiaryId');
+            $table->string('governmentId')->nullable();
             $table->string('firstName')->nullable();
             $table->string('lastName')->nullable();
             $table->string('otherNames')->nullable();
             $table->string('phoneNumber')->nullable();
             $table->string('email')->nullable();
-
+            $table->unsignedBigInteger('cadre')->nullable();
             $table->unsignedBigInteger('lga')->nullable();
-            $table->unsignedBigInteger('enrolleeType')->nullable();
+            $table->unsignedBigInteger('beneficiaryType')->nullable();
             $table->unsignedBigInteger('enrolledBy')->nullable();
 
             $table->foreign('lga')->references('lgaId')->on('lgas')->onDelete('cascade');
@@ -29,9 +30,9 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('enrolleeType')->references('typeId')->on('enrollee_type')->onDelete('cascade');
+            $table->foreign('beneficiaryType')->references('typeId')->on('beneficiary_type')->onDelete('cascade');
             $table->foreign('enrolledBy')->references('id')->on('users')->onDelete('cascade');
-            
+            $table->foreign('cadre')->references('cadreId')->on('cadre')->onDelete('cascade');
             
         });
     }

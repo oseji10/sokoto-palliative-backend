@@ -5,13 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Enrollees extends Model
+class Beneficiary extends Model
 {
     use HasFactory;
 
-    public $table = 'enrollees';
+    public $table = 'beneficiaries';
     protected $fillable = [
-        'enrolleeId',
+        'beneficiaryId',
         'firstName',
         'lastName',
         'otherNames',
@@ -22,12 +22,12 @@ class Enrollees extends Model
         'lga',
         'isActive',
     ];
-    protected $primaryKey = 'enrolleeId';
+    protected $primaryKey = 'beneficiaryId';
 
-    public function enrollee_type()
+    public function beneficiary_type()
     {
-        return $this->belongsTo(EnrolleeType::class, 'enrolleeType', 'typeId');
-    } 
+        return $this->belongsTo(BeneficiaryType::class, 'beneficiaryType', 'typeId');
+    }
 
     public function enrolled_by()
     {

@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('staff', function (Blueprint $table) {
             $table->id('staffId');
-            $table->string('effectiveFrom')->nullable();
-            $table->string('effectiveUntil')->nullable();
+            $table->date('effectiveFrom')->nullable();
+            $table->date('effectiveUntil')->nullable();
             $table->unsignedBigInteger('userId')->nullable();
             $table->unsignedBigInteger('staffType')->nullable();
             $table->unsignedBigInteger('lga')->nullable();
