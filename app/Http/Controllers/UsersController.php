@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use App\Mail\WelcomeEmail;
 use Illuminate\Support\Facades\Mail;
+use DB;
+use Illuminate\Http\JsonResponse;
+use App\Models\Lgas;
 class UsersController extends Controller
 {
     public function index()
@@ -105,4 +108,37 @@ class UsersController extends Controller
 }
 
     
+        public function update(Request $request, $staffId)  
+{
+        $staff = Staff::find($staffId);
+        if (!$staff) {
+            return response()->json(['message' => 'Staff not found'], 404);
+        }
+
+        $staff->update($request->all());
+        return response()->json($staff);
+    }
+
+   public function destroy($id): JsonResponse
+    {
+        return DB::transaction(function () use ($id) {
+            // Find the user
+            $user = User::find($id);
+            if (!$user) {
+                return response()->json(['message' => 'Staff not found'], 404);
+            }
+
+            // Find the associated staff record
+            $staff = Staff::where('userId', $id)->first();
+            if (!$staff) {
+                return response()->json(['message' => 'Associated staff record not found'], 404);
+            }
+
+            // Delete both records
+            $staff->delete();
+            $user->delete();
+
+            return response()->json(['message' => 'Staff deleted successfully']);
+        }, 5);
+    }
 }

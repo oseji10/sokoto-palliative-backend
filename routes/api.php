@@ -79,5 +79,6 @@ use App\Http\Controllers\UsersController;
         Route::get('/beneficiaries/types', [BeneficiariesController::class, 'beneficiaryTypes']);
 
         Route::post('/staff', [UsersController::class, 'store']);
+        Route::delete('/staff/{id}/delete', [UsersController::class, 'destroy']);
     });
 // });
