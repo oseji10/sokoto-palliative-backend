@@ -13,6 +13,7 @@ use App\Http\Controllers\StateController;
 use App\Http\Controllers\UsersController;
 use App\Http\Controllers\MinistryController;
 use App\Http\Controllers\CadreController;
+use App\Http\Controllers\AnalyticsController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -105,5 +106,7 @@ use App\Http\Controllers\CadreController;
 
         Route::post('/staff', [UsersController::class, 'store']);
         Route::delete('/staff/{id}/delete', [UsersController::class, 'destroy']);
+
+        Route::get('analytics/total-users', [AnalyticsController::class, 'getTotalBeneficiaries']);
     });
 // });
