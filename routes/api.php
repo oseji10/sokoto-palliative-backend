@@ -96,9 +96,12 @@ use App\Http\Controllers\CadreController;
         Route::get('/beneficiaries', [BeneficiariesController::class, 'index']);
         Route::post('/beneficiaries', [BeneficiariesController::class, 'store']);
         Route::get('/beneficiaries/types', [BeneficiariesController::class, 'beneficiaryTypes']);
-        Route::get('/beneficiaries/{id}', [BeneficiariesController::class, 'show']);
+        // Route::get('/beneficiaries/{id}', [BeneficiariesController::class, 'show']);
         Route::put('/beneficiaries/{id}/edit', [BeneficiariesController::class, 'update']);
         Route::delete('/beneficiaries/{id}/delete', [BeneficiariesController::class, 'destroy']);
+        
+        Route::get('/beneficiaries/onboarder', [BeneficiariesController::class, 'getOnboarderBeneficiaries']);
+        
 
         Route::post('/staff', [UsersController::class, 'store']);
         Route::delete('/staff/{id}/delete', [UsersController::class, 'destroy']);

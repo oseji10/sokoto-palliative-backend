@@ -15,6 +15,17 @@ class BeneficiariesController extends Controller
 
     }
 
+    public function getOnboarderBeneficiaries()
+    {
+        $user = auth()->user();
+        // return $user->staff->lga;
+        $beneficiaries = Beneficiary::with('enrolled_by', 'beneficiary_type', 'lga_info', 'cadre_info', 'ministry_info')
+        ->where('lga', $user->staff->lga)
+        ->get();
+        return response()->json($beneficiaries);
+
+    }
+
     public function beneficiaryTypes()
     {
         $beneficiaryTypes = BeneficiaryType::all();
@@ -71,17 +82,17 @@ class BeneficiariesController extends Controller
     ], 201);
 }
 
-public function show($beneficiaryId)
-{
-    $beneficiary = Beneficiary::find($beneficiaryId);
-    if (!$beneficiary) {
-        return response()->json(['message' => 'Beneficiary not found'], 404);
-    }
-    $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info']);
-    return response()->json($beneficiary);
+// public function show($beneficiaryId)
+// {
+//     $beneficiary = Beneficiary::find($beneficiaryId);
+//     if (!$beneficiary) {
+//         return response()->json(['message' => 'Beneficiary not found'], 404);
+//     }
+//     $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info']);
+//     return response()->json($beneficiary);
 
-    $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info']);
-}
+//     $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info']);
+// }
 
 
 

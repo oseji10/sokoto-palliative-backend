@@ -43,57 +43,64 @@ class AuthController extends Controller
        
     }
 
-    public function login(Request $request)
-    {
-        $request->validate([
-            'username' => 'required',
-            'password' => 'required',
+  public function login(Request $request)
+{
+    $request->validate([
+        'username' => 'required',
+        'password' => 'required',
+    ]);
+
+    // Find user by email or phone number with staff and role relationships
+    $user = User::with(['staff.staff_type', 'role'])
+                ->where('email', $request->username)
+                ->orWhere('phoneNumber', $request->username)
+                ->first();
+
+    if (!$user) {
+        throw ValidationException::withMessages([
+            'username' => ['No account found with this email or phone number.'],
         ]);
-
-        // Find user by email or phone number
-        $user = User::where('email', $request->username)
-                    ->orWhere('phoneNumber', $request->username)
-                    ->first();
-
-        if (!$user) {
-            throw ValidationException::withMessages([
-                'username' => ['No account found with this email or phone number.'],
-            ]);
-        }
-
-        // Attempt JWT authentication
-        $credentials = [
-            'email' => $user->email,
-            'password' => $request->password,
-        ];
-
-        if (!$accessToken = auth('api')->attempt($credentials)) {
-            return response()->json(['error' => 'Invalid credentials'], 401);
-        }
-
-        // Generate refresh token
-        $refreshToken = Str::random(64);
-        $user = auth('api')->user();
-
-        // Store refresh token in database
-        RefreshToken::create([
-            'user_id' => $user->id,
-            'token' => $refreshToken,
-            'expires_at' => Carbon::now()->addDays(14),
-        ]);
-
-        // Hide sensitive data
-        $user->makeHidden(['password']);
-
-        // Return response with cookies
-        return response()->json([
-            'message' => 'Logged in',
-            'user' => $user,
-            'access_token' => $accessToken,
-        ])
-            ->cookie('access_token', $accessToken, 15, null, null, true, true, false, 'strict')
-            ->cookie('refresh_token', $refreshToken, 14 * 24 * 60, null, null, true, true, false, 'strict');
     }
+
+    // Attempt JWT authentication
+    $credentials = [
+        'email' => $user->email,
+        'password' => $request->password,
+    ];
+
+    if (!$accessToken = auth('api')->attempt($credentials)) {
+        return response()->json(['error' => 'Invalid credentials'], 401);
+    }
+
+    // Generate refresh token
+    $refreshToken = Str::random(64);
+    $user = auth('api')->user()->load(['staff.staff_type', 'role']); // Reload relationships
+
+    // Store refresh token in database
+    RefreshToken::create([
+        'user_id' => $user->id,
+        'token' => $refreshToken,
+        'expires_at' => Carbon::now()->addDays(14),
+    ]);
+
+    // Hide sensitive data
+    $user->makeHidden(['password']);
+
+    // Return response with cookies
+    return response()->json([
+        'message' => 'Logged in',
+        'firstName' => $user->firstName ?? '',
+        'lastName' => $user->lastName ?? '',
+        'email' => $user->email ?? '',
+        'phoneNumber' => $user->phoneNumber ?? '',
+        'role' => $user->role ? $user->role->roleName ?? '' : '', // Safe access
+        'staffType' => $user->staff && $user->staff->staff_type ? $user->staff->staff_type->typeName ?? '' : null, // Safe access
+        'lga' => $user->staff && $user->staff->lga ? $user->staff->lga_info->lgaName ?? '' : null, // Safe access
+        'access_token' => $accessToken,
+    ])
+        ->cookie('access_token', $accessToken, 15, null, null, true, true, false, 'strict')
+        ->cookie('refresh_token', $refreshToken, 14 * 24 * 60, null, null, true, true, false, 'strict');
+}
 
     public function refresh(Request $request)
     {

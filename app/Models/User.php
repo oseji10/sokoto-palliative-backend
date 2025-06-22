@@ -48,7 +48,7 @@ class User extends Authenticatable implements JWTSubject
     
     public function role()
     {
-        return $this->hasOne(Roles::class, 'roleId', 'role'); // Assuming doctorId is the foreign key
+        return $this->belongsTo(Role::class, 'role', 'roleId'); 
     }
 
     public function hospital_admins()
