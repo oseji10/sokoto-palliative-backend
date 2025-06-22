@@ -12,6 +12,7 @@ class Stock extends Model
     public $table = 'stock';
     protected $fillable = [
         'stockId',
+        'productId',
         'stockName',
         'batchNumber',
         'quantityReceived',
@@ -20,7 +21,7 @@ class Stock extends Model
         'quantityExpired',
         'quantityDamaged',
         'expiryDate',
-        'lgaId',
+        'lga',
         'receivedBy',
         'status',
         'isActive',
@@ -29,12 +30,12 @@ class Stock extends Model
 
     public function product()
     {
-        return $this->belongsTo(Product::class, 'productId', 'productId');
+        return $this->belongsTo(Products::class, 'productId', 'productId');
     }
 
-    public function lga()
+    public function lga_info()
     {
-        return $this->belongsTo(Lga::class, 'lgaId', 'lgaId');
+        return $this->belongsTo(Lgas::class, 'lgaId', 'lgaId');
     }
 
     public function received_by()
