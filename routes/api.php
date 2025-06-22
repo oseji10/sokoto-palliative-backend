@@ -74,7 +74,8 @@ use App\Http\Controllers\TransactionsController;
 
         // Stock routes
         Route::get('/stock', [StockController::class, 'index']);
-        Route::get('/stock/{stockId}', [StockController::class, 'show']);
+        // Route::get('/stock/{stockId}', [StockController::class, 'show']);
+        Route::get('/stock/available', [StockController::class, 'availableStock']);
         Route::post('/stock', [StockController::class, 'store']);
         Route::put('/stock/{stockId}/edit', [StockController::class, 'update']);
         Route::delete('/stock/{stockId}/delete', [StockController::class, 'destroy']);
