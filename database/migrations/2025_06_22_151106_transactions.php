@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration
 {
@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('cost')->nullable();
             $table->unsignedBigInteger('soldBy')->nullable();
             $table->string('paymentMethod')->nullable();
+            $table->unsignedBigInteger('approvedBy');
             $table->timestamps();
 
             $table->foreign('productId')->references('productId')->on('products')->onDelete('cascade');
