@@ -24,7 +24,7 @@ class ProductRequest extends Model
         'approvedDate',
         'receivedDate',
     ];
-    protected $primaryKey = 'productRequestId';
+    protected $primaryKey = 'id';
 
     
 }

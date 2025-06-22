@@ -16,6 +16,8 @@ use App\Http\Controllers\CadreController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\ProductRequestController;
+use App\Http\Controllers\TransactionsController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -77,6 +79,13 @@ use App\Http\Controllers\ProductRequestController;
         Route::put('/stock/{stockId}/edit', [StockController::class, 'update']);
         Route::delete('/stock/{stockId}/delete', [StockController::class, 'destroy']);
 
+        // Transaction route
+        Route::get('/transactions', [TransactionsController::class, 'index']);
+        Route::get('/transactions/{transactionId}', [TransactionsController::class, 'show']);
+        Route::post('/transactions', [TransactionsController::class, 'store']);
+        Route::put('/transactions/{transactionId}/edit', [TransactionsController::class, 'update']);
+        Route::delete('/transactions/{transactionId}/delete', [TransactionsController::class, 'destroy']);
+
          // Product Request routes
         Route::get('/product-request', [ProductRequestController::class, 'index']);
         Route::get('/product-request/{productRequestId}', [ProductRequestController::class, 'show']);
@@ -124,6 +133,7 @@ use App\Http\Controllers\ProductRequestController;
         Route::post('/staff', [UsersController::class, 'store']);
         Route::delete('/staff/{id}/delete', [UsersController::class, 'destroy']);
 
+        
         Route::get('analytics/total-users', [AnalyticsController::class, 'getTotalBeneficiaries']);
     });
 // });

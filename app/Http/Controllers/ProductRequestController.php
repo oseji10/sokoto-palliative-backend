@@ -20,19 +20,45 @@ class ProductRequestController extends Controller
         return response()->json($productrequest);
     }
 
-    public function store(Request $request)
+   public function store(Request $request)
     {
-        // Directly get the data from the request
-        $data = $request->all();
-    
-        // Create a new user with the data (ensure that the fields are mass assignable in the model)
-        $productrequests = ProductRequest::create($data);
-        
-        // Return a response, typically JSON
+        // Validate the payload
+        $validatedData = $request->validate([
+            'products' => 'required|array|min:1', // Ensure products is an array with at least one item
+            'products.*.productId' => 'required|exists:products,productId', // Validate each productId exists
+            'products.*.quantityRequested' => 'required|integer|min:1', // Validate quantity as an integer
+        ]);
+
+        $createdRequests = [];
+
+        // Loop through each product in the payload
+        foreach ($validatedData['products'] as $productData) {
+            // Create a new ProductRequest for each product
+            $productRequest = ProductRequest::create([
+                'productId' => $productData['productId'],
+                'quantityRequested' => $productData['quantityRequested'],
+                'requestDate' => now(), // Store the request date
+                'quantityDispatched' => 0, // Default value
+                'quantityReceived' => 0, // Default value
+                // Add other fields like status, approvedBy, batchNumber if needed
+            ]);
+
+            $createdRequests[] = [
+                'productRequestId' => $productRequest->productRequestId,
+                'productId' => $productRequest->productId,
+                'productName' => $productRequest->product ? $productRequest->product->productName : 'Unknown', // Assuming a product relationship
+                'quantityRequested' => $productRequest->quantityRequested,
+                'quantityDispatched' => $productRequest->quantityDispatched,
+                'quantityReceived' => $productRequest->quantityReceived,
+                'requestDate' => $productRequest->requestDate,
+            ];
+        }
+
+        // Return a JSON response
         return response()->json([
-            'message' => 'ProductRequest created successfully',
-            'productrequestId' => $productrequests->productrequestId,
-            'productrequestName' => $productrequests->productrequestName], 201); // HTTP status code 201: Created
+            'message' => 'Product requests created successfully',
+            'productRequests' => $createdRequests,
+        ], 201);
     }
 
     public function update(Request $request, $productrequestId)
