@@ -15,6 +15,7 @@ use App\Http\Controllers\MinistryController;
 use App\Http\Controllers\CadreController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\StockController;
+use App\Http\Controllers\ProductRequestController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -75,6 +76,13 @@ use App\Http\Controllers\StockController;
         Route::post('/stock', [StockController::class, 'store']);
         Route::put('/stock/{stockId}/edit', [StockController::class, 'update']);
         Route::delete('/stock/{stockId}/delete', [StockController::class, 'destroy']);
+
+         // Product Request routes
+        Route::get('/product-request', [ProductRequestController::class, 'index']);
+        Route::get('/product-request/{productRequestId}', [ProductRequestController::class, 'show']);
+        Route::post('/product-request', [ProductRequestController::class, 'store']);
+        Route::put('/product-request/{productRequestId}/edit', [ProductRequestController::class, 'update']);
+        Route::delete('/product-request/{productRequestId}/delete', [ProductRequestController::class, 'destroy']);
 
 
         // Product routes
