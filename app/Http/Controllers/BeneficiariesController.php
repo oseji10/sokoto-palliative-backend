@@ -6,11 +6,14 @@ use Illuminate\Http\Request;
 use App\Models\Beneficiary;
 use App\Models\User; 
 use App\Models\BeneficiaryType;
+use App\Models\BeneficiaryImage;
 class BeneficiariesController extends Controller
 {
     public function index()
     {
-        $beneficiaries = Beneficiary::with('enrolled_by', 'beneficiary_type', 'lga_info', 'cadre_info', 'ministry_info')->get();
+        $beneficiaries = Beneficiary::with('enrolled_by', 'beneficiary_type', 'lga_info', 'cadre_info', 'ministry_info', 'beneficiary_image')
+        ->orderBy('created_at', 'desc')
+        ->get();
         return response()->json($beneficiaries);
 
     }
@@ -19,8 +22,9 @@ class BeneficiariesController extends Controller
     {
         $user = auth()->user();
         // return $user->staff->lga;
-        $beneficiaries = Beneficiary::with('enrolled_by', 'beneficiary_type', 'lga_info', 'cadre_info', 'ministry_info')
+        $beneficiaries = Beneficiary::with('enrolled_by', 'beneficiary_type', 'lga_info', 'cadre_info', 'ministry_info', 'beneficiary_image')
         ->where('lga', $user->staff->lga)
+        ->orderBy('created_at', 'desc')
         ->get();
         return response()->json($beneficiaries);
 
@@ -45,6 +49,8 @@ class BeneficiariesController extends Controller
         'ministry' => 'nullable|integer|exists:ministries,ministryId',
         'cadre' => 'nullable|integer|exists:cadres,cadreId',
         'employeeId' => 'nullable|string|max:255',
+        'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // Adjust validation rules as needed
+
     ]);
 
     // Get the authenticated staff
@@ -61,11 +67,20 @@ class BeneficiariesController extends Controller
         'lga' => $user->staff->lga, // Assign the staff's LGA to the beneficiary
     ]);
 
+    
     // Create the beneficiary
     $beneficiary = Beneficiary::create($data);
     // $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info']);
 
-    $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info', 'cadre_info', 'ministry_info']);
+    $imagePath = $request->file('image')->store('beneficiary_images', 'public');
+        
+        // Assuming you have a ProductImage model to handle product images
+        $beneficiary->beneficiary_image()->create([
+            'imagePath' => $imagePath,
+            'beneficiaryId' => $beneficiary->beneficiaryId, 
+        ]);
+        
+    $beneficiary->load(['beneficiary_type', 'enrolled_by', 'lga_info', 'cadre_info', 'ministry_info', 'beneficiary_image']);
     return response()->json([
         'beneficiaryId' => $beneficiary->beneficiaryId,
         'employeeId' => $beneficiary->employeeId,

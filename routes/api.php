@@ -14,6 +14,7 @@ use App\Http\Controllers\UsersController;
 use App\Http\Controllers\MinistryController;
 use App\Http\Controllers\CadreController;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\StockController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -67,6 +68,14 @@ use App\Http\Controllers\AnalyticsController;
         Route::post('/cadres', [CadreController::class, 'store']);
         Route::put('/cadres/{cadreId}/edit', [CadreController::class, 'update']);
         Route::delete('/cadres/{cadreId}/delete', [CadreController::class, 'destroy']);
+
+        // Stock routes
+        Route::get('/stock', [StockController::class, 'index']);
+        Route::get('/stock/{stockId}', [StockController::class, 'show']);
+        Route::post('/stock', [StockController::class, 'store']);
+        Route::put('/stock/{stockId}/edit', [StockController::class, 'update']);
+        Route::delete('/stock/{stockId}/delete', [StockController::class, 'destroy']);
+
 
         // Product routes
         Route::get('/products', [ProductsController::class, 'index']);

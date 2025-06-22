@@ -51,4 +51,10 @@ class Beneficiary extends Model
     {
         return $this->belongsTo(Ministry::class, 'ministry', 'ministryId');
     }
+
+    public function beneficiary_image()
+    {
+        return $this->belongsTo(BeneficiaryImage::class, 'beneficiaryId', 'beneficiaryId');
+    }
+
 }
