@@ -7,6 +7,8 @@ use App\Models\Beneficiary;
 use App\Models\User; 
 use App\Models\BeneficiaryType;
 use App\Models\BeneficiaryImage;
+use Illuminate\Http\JsonResponse;
+
 class BeneficiariesController extends Controller
 {
     public function index()
@@ -28,6 +30,54 @@ class BeneficiariesController extends Controller
         ->get();
         return response()->json($beneficiaries);
 
+    }
+
+     public function getOneBeneficiary(Request $request): JsonResponse
+    {
+        // Check if user is authenticated
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        // Validate search parameter
+        $searchParam = $request->query('param');
+        if (!$searchParam) {
+            return response()->json(['message' => 'Search parameter is required'], 400);
+        }
+
+        // Check if user has staff relationship and LGA
+        if (!$user->staff || !$user->staff->lga) {
+            return response()->json(['message' => 'User LGA not configured'], 403);
+        }
+
+        // Query beneficiary with LGA restriction and search parameter
+        $beneficiary = Beneficiary::with(['enrolled_by', 'beneficiary_type', 'lga_info', 'cadre_info', 'ministry_info', 'beneficiary_image'])
+            ->where('lga', $user->staff->lga)
+            ->where(function ($query) use ($searchParam) {
+                $query->where('beneficiaryId', $searchParam)
+                      ->orWhere('phoneNumber', $searchParam)
+                      ->orWhere('email', $searchParam);
+            })
+            ->first();
+
+        // Return 404 if no beneficiary is found
+        if (!$beneficiary) {
+            return response()->json(['message' => 'No beneficiary found'], 404);
+        }
+
+        // Format response to match frontend expectations
+        $response = [
+            'userId' => $beneficiary->beneficiaryId,
+            'email' => $beneficiary->email,
+            'phoneNumber' => $beneficiary->phoneNumber,
+            'employeeId' => $beneficiary->employeeId ?? $beneficiary->beneficiaryId,
+            'firstName' => $beneficiary->firstName,
+            'lastName' => $beneficiary->lastName,
+            'department' => $beneficiary->ministry_info?->name ?? null,
+        ];
+
+        return response()->json($response);
     }
 
     public function beneficiaryTypes()

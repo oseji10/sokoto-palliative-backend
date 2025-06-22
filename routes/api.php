@@ -85,7 +85,8 @@ use App\Http\Controllers\TransactionsController;
         Route::post('/transactions', [TransactionsController::class, 'store']);
         Route::put('/transactions/{transactionId}/edit', [TransactionsController::class, 'update']);
         Route::delete('/transactions/{transactionId}/delete', [TransactionsController::class, 'destroy']);
-
+        Route::get('/users/search', [BeneficiariesController::class, 'getOneBeneficiary']);
+        
          // Product Request routes
         Route::get('/product-request', [ProductRequestController::class, 'index']);
         Route::get('/product-request/{productRequestId}', [ProductRequestController::class, 'show']);
