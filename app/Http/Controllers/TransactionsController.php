@@ -119,7 +119,7 @@ class TransactionsController extends Controller
                 'updated_at' => Carbon::now(),
             ]);
 
-            return $moniepointResponse;
+            return response()->json([$moniepointResponse],200);
 
             // return response()->json([
             //     'transactionId' => $transactionId,
