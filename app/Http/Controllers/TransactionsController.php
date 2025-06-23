@@ -84,7 +84,7 @@ class TransactionsController extends Controller
 
             // Call Moniepoint API for outright payments
             if ($request->paymentMethod === 'outright') {
-                $totalCostInKobo = $totalCost * 100; // Convert to kobo
+                $totalCostInKobo = $totalCost; // Convert to kobo
                 $moniepointResponse = Http::withHeaders([
                     'Authorization' => 'Bearer mptp_a72e62d6220b4c279f05f0d90c71f79b_cce5ff',
                     'Cookie' => '__cf_bm=llJAllZZ4ww_EAgd7WsHAiW9Xhdt5tOKkWsvByK6X2c-1750629087-1.0.1.1-2zOUQHrb5PyiYLrXqoA6kiONrHhKIZ2z7ifHO.iSk1Ue539LjL8bhuUWeZ7RaafQfCvMnh9Ke08Ks7Kkt4k0T2H0uJb89.aTwZt52.qkpyM'
@@ -97,7 +97,7 @@ class TransactionsController extends Controller
                 ]);
 
                 // Check if Moniepoint payment was successful
-                if ($moniepointResponse->failed() || !isset($moniepointResponse['status']) || $moniepointResponse['status'] !== 'SUCCESS') {
+                if ($moniepointResponse->failed() || !isset($moniepointResponse['code']) || $moniepointResponse['code'] !== '202') {
                     return response()->json([
                         'message' => 'Payment processing failed',
                         'error' => $moniepointResponse['message'] ?? 'Moniepoint API error'
