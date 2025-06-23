@@ -31,4 +31,13 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+
+    'moniepoint' => [
+        'key' => env('MONIEPOINT_KEY'),
+        'cookie' => env('MONIEPOINT_COOKIE'),
+        'terminal_serial' => env('TERMINAL_SERIAL'),
+        'api_url' => env('MONIEPOINT_API_URL', 'https://api.pos.moniepoint.com/v1/transactions'),
+    ],
+
+
 ];
