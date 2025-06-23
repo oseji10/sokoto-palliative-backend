@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Transactions;
+use App\Models\TransactionProducts;
+use App\Models\Products;
+use App\Models\Stock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -13,12 +16,14 @@ class TransactionsController extends Controller
 {
     public function index()
     {
-        $transactions = Transaction::all();
+        $transactions = Transactions::with('transaction_products.products', 'beneficiary', 'seller')
+        ->orderBy('created_at', 'desc')
+        ->get();
         return response()->json($transactions);
     }
     public function show($transactionId)
     {
-        $transaction = Transaction::find($transactionId);
+        $transaction = Transactions::find($transactionId);
         if (!$transaction) {
             return response()->json(['message' => 'Transaction not found'], 404);
         }
@@ -27,112 +32,127 @@ class TransactionsController extends Controller
 
     
 
-     
     public function store(Request $request): JsonResponse
-    {
-        // Validate the incoming request
-        $validator = Validator::make($request->all(), [
-            'beneficiaryId' => 'required|exists:beneficiaries,beneficiaryId',
-            'products' => 'required|array|min:1',
-            'products.*.productId' => 'required|exists:products,productId',
-            'products.*.quantity' => 'required|integer|min:1',
-        ]);
+{
+    // Validate the incoming request
+    $validator = Validator::make($request->all(), [
+        'beneficiaryId' => 'required|exists:beneficiaries,beneficiaryId',
+        'products' => 'required|array|min:1',
+        'products.*.productId' => 'required|exists:products,productId',
+        'products.*.quantity' => 'required|integer|min:1',
+        'paymentMethod' => 'required|in:outright,loan', // Added validation for paymentMethod
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
+    if ($validator->fails()) {
+        return response()->json([
+            'message' => 'Validation failed',
+            'errors' => $validator->errors()
+        ], 422);
+    }
 
-        try {
-            // Begin a database transaction
-            return DB::transaction(function () use ($request) {
-                // Generate a random transaction ID (UUID)
-                $transactionId = Str::uuid()->toString();
+    try {
+        // Begin a database transaction
+        return DB::transaction(function () use ($request) {
+            // Generate a random transaction ID
+            $transactionId = Str::random(12);
 
-                // Create the transaction
-                $transaction = Transactions::create([
-                    'transactionId' => $transactionId,
-                    'beneficiaryId' => $request->beneficiaryId,
-                    // 'request_date' => Carbon::now(),
-                    // 'status' => 'pending',
-                ]);
+            // Get authenticated user
+            $user = auth()->user();
+            if (!$user || !$user->staff) {
+                throw new \Exception('Authenticated user or staff data not found');
+            }
 
-                // Process each product
-                $products = $request->products;
-                $transactionProducts = [];
+            // Create the transaction
+            $transaction = Transactions::create([
+                'transactionId' => $transactionId,
+                'beneficiary' => $request->beneficiaryId,
+                'paymentMethod' => $request->paymentMethod,
+                'lga' => $user->staff->lga,
+                'soldBy' => $user->id,
+                'status' => 'pending',
+                
+            ]);
 
-                foreach ($products as $product) {
-                    $productId = $product['productId'];
-                    $quantity = $product['quantity'];
+            // Process each product
+            $products = $request->products;
+            $transactionProducts = [];
 
-                    // Check stock availability
-                    $stock = Stock::where('productId', $productId)->first();
-                    if (!$stock) {
-                        throw new \Exception("Stock not found for product ID {$productId}");
-                    }
+            foreach ($products as $product) {
+                $productId = $product['productId'];
+                $quantity = $product['quantity'];
 
-                    $availableStock = $stock->quantity_received - (
-                        ($stock->quantitySold ?? 0) 
-                        // ($stock->quantity_transferred ?? 0) +
-                        // ($stock->quantity_expired ?? 0) +
-                        // ($stock->quantity_damaged ?? 0)
-                    );
-
-                    if ($quantity > $availableStock) {
-                        throw new \Exception("Insufficient stock for product ID {$productId}. Available: {$availableStock}, Requested: {$quantity}");
-                    }
-
-                    // Create transaction product entry
-                    $transactionProducts[] = [
-                        'transactionId' => $transactionId,
-                        'productId' => $productId,
-                        'quantitySold' => $quantity,
-                        // 'quantity_dispatched' => 0,
-                        // 'quantity_received' => 0,
-                        // 'created_at' => Carbon::now(),
-                        // 'updated_at' => Carbon::now(),
-                    ];
-
-                    // Update stock (increment quantity_sold)
-                    $stock->increment('quantitySold', $quantity);
+                // Fetch product details (including price)
+                $productModel = Products::find($productId);
+                if (!$productModel) {
+                    throw new \Exception("Product not found for product ID {$productId}");
                 }
 
-                // Insert transaction products
-                TransactionProduct::insert($transactionProducts);
+                // Check stock availability
+                $stock = Stock::where('productId', $productId)->first();
+                if (!$stock) {
+                    throw new \Exception("Stock not found for product ID {$productId}");
+                }
 
-                // Fetch the transaction with related data
-                $transaction = Transactions::with(['beneficiary', 'products.product'])
-                    ->where('transaction_id', $transactionId)
-                    ->first();
+                $availableStock = $stock->quantityReceived - (
+                    ($stock->quantitySold ?? 0)
+                );
 
-                // Format response
-                $response = [
-                    'transactionId' => $transaction->transactionId,
-                    'beneficiaryId' => $transaction->beneficiaryId,
-                    // 'requestDate' => $transaction->request_date->toIso8601String(),
-                    // 'status' => $transaction->status,
-                    'products' => $transaction->products->map(function ($transactionProduct) {
-                        return [
-                            'productId' => $transactionProduct->productId,
-                            'productName' => $transactionProduct->product->productName ?? 'Unknown Product',
-                            // 'quantityRequested' => $transactionProduct->quantity_requested,
-                            // 'quantityDispatched' => $transactionProduct->quantity_dispatched,
-                            // 'quantityReceived' => $transactionProduct->quantity_received,
-                        ];
-                    })->toArray(),
+                if ($quantity > $availableStock) {
+                    throw new \Exception("Insufficient stock for product ID {$productId}. Available: {$availableStock}, Requested: {$quantity}");
+                }
+
+                // Create transaction product entry
+                $transactionProducts[] = [
+                    'transactionId' => $transactionId,
+                    'productId' => $productId,
+                    'quantitySold' => $quantity,
+                    'cost' => $productModel->cost, // Store product price
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
                 ];
 
-                return response()->json($response, 201);
-            });
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to create transaction',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+                // Update stock (increment quantity_sold)
+                $stock->increment('quantitySold', $quantity);
+            }
+
+            // Insert transaction products
+            TransactionProducts::insert($transactionProducts);
+
+            // Fetch the transaction with related data
+            $transaction = Transactions::with(['beneficiary', 'products.product', 'transaction_products.products'])
+                ->where('transactionId', $transactionId)
+                ->firstOrFail();
+
+            // Format response
+      $response = [
+    'transactionId' => $transaction->transactionId,
+    'beneficiary' => $transaction->beneficiary, // You probably want full data, not just ID
+    'status' => $transaction->status,
+    'paymentMethod' => $transaction->paymentMethod,
+    
+    // Map over all transaction_products
+    'products' => $transaction->transaction_products->map(function ($transactionProduct) {
+        return [
+            'productId' => $transactionProduct->productId,
+            'productName' => $transactionProduct->product->productName ?? 'Unknown Product',
+            'quantitySold' => $transactionProduct->quantitySold,
+            'cost' => $transactionProduct->cost,
+        ];
+    })->toArray(),
+];
+
+
+
+
+            return response()->json($response, 201);
+        });
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Failed to create transaction',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
 
     
