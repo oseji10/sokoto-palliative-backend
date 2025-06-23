@@ -13,19 +13,19 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('beneficiary')->nullable();
             $table->string('transactionId')->nullable();
-            $table->unsignedBigInteger('productId')->nullable();
             $table->unsignedBigInteger('lga')->nullable();
-            $table->string('quantitySold')->nullable();
-            $table->string('cost')->nullable();
             $table->unsignedBigInteger('soldBy')->nullable();
             $table->string('paymentMethod')->nullable();
+            $table->string('status')->nullable();
             $table->timestamps();
 
-            $table->foreign('productId')->references('productId')->on('products')->onDelete('cascade');
+            
             $table->foreign('lga')->references('lgaId')->on('lgas')->onDelete('cascade');
             $table->foreign('soldBy')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('approvedBy')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('beneficiary')->references('beneficiaryId')->on('beneficiaries')->onDelete('cascade');
+            
             
         });
     }

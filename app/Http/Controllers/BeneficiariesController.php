@@ -52,11 +52,12 @@ class BeneficiariesController extends Controller
         }
 
         // Query beneficiary with LGA restriction and search parameter
-        $beneficiary = Beneficiary::with(['enrolled_by', 'beneficiary_type', 'lga_info', 'cadre_info', 'ministry_info', 'beneficiary_image'])
+        $beneficiary = Beneficiary::with(['enrolled_by', 'beneficiary_type', 'lga_info', 'cadre_info', 'ministry_info', 'beneficiary_image', 'cadre_info', 'beneficiary_type'])
             ->where('lga', $user->staff->lga)
             ->where(function ($query) use ($searchParam) {
                 $query->where('beneficiaryId', $searchParam)
                       ->orWhere('phoneNumber', $searchParam)
+                      ->orWhere('employeeId', $searchParam)
                       ->orWhere('email', $searchParam);
             })
             ->first();
@@ -75,6 +76,8 @@ class BeneficiariesController extends Controller
             'firstName' => $beneficiary->firstName,
             'lastName' => $beneficiary->lastName,
             'department' => $beneficiary->ministry_info?->name ?? null,
+            'salary' => $beneficiary->cadre_info?->salary ?? null,
+            'billingSetting' => $beneficiary->beneficiary_type?->billingSetting ?? null,
         ];
 
         return response()->json($response);
@@ -93,12 +96,12 @@ class BeneficiariesController extends Controller
         'firstName' => 'required|string|max:255',
         'lastName' => 'required|string|max:255',
         'otherNames' => 'nullable|string|max:255',
-        'phoneNumber' => 'nullable|string|max:20',
+        'phoneNumber' => 'nullable|string|max:11|unique:beneficiaries,phoneNumber',
         'email' => 'nullable|email|max:255|unique:beneficiaries,email',
         'beneficiaryType' => 'required|integer|exists:beneficiary_type,typeId',
         'ministry' => 'nullable|integer|exists:ministries,ministryId',
         'cadre' => 'nullable|integer|exists:cadres,cadreId',
-        'employeeId' => 'nullable|string|max:255',
+        'employeeId' => 'nullable|string|max:255|unique:beneficiaries,employeeId',
         'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // Adjust validation rules as needed
 
     ]);
