@@ -40,7 +40,7 @@ class PaymentController extends BaseController
                 'amount' => $amount,
                 'terminal_serial' => $terminal,
                 'payment_method' => $data['payment_method'] ?? 'ANY',
-                'status' => Transaction::STATUS_PENDING,
+                'status' => Payment::STATUS_PENDING,
                 'user_id' => $user?->id,
             ]);
             $txn->save();
@@ -88,7 +88,7 @@ class PaymentController extends BaseController
     public function getTransactionStatus(string $reference)
     {
         try {
-            if (!$txn = Transaction::where('reference', $reference)->first()) {
+            if (!$txn = Payment::where('reference', $reference)->first()) {
                 return response()->json(['status' => false, 'message' => 'Transaction not found'], 404);
             }
 
@@ -137,15 +137,15 @@ class PaymentController extends BaseController
     protected function updateTransactionFromTerminalData(Transaction $txn, array $data): void
     {
         $status = match($data['processingStatus'] ?? '') {
-            'COMPLETED' => Transaction::STATUS_COMPLETED,
-            'CANCELLED', 'FAILED' => Transaction::STATUS_CANCELLED,
+            'COMPLETED' => Payment::STATUS_COMPLETED,
+            'CANCELLED', 'FAILED' => Payment::STATUS_CANCELLED,
             default => $txn->status,
         };
 
         $txn->update([
             'status' => $status,
             'response' => array_merge($txn->response ?? [], $data),
-            'paid_at' => $status === Transaction::STATUS_COMPLETED && !$txn->paid_at ? now() : $txn->paid_at,
+            'paid_at' => $status === Payment::STATUS_COMPLETED && !$txn->paid_at ? now() : $txn->paid_at,
         ]);
     }
 }

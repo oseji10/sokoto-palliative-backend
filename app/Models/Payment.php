@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Transaction extends Model
+class Payment extends Model
 {
     use HasFactory;
 
@@ -20,7 +20,7 @@ class Transaction extends Model
         'reference',
         'amount',
         'terminal_serial',
-        'transaction_type',
+        'payment_type',
         'payment_method',
         'status',
         'response',
@@ -40,7 +40,7 @@ class Transaction extends Model
     ];
 
     /**
-     * Get the user that owns the transaction
+     * Get the user that owns the payment
      */
     public function user(): BelongsTo
     {
@@ -48,7 +48,7 @@ class Transaction extends Model
     }
 
     /**
-     * Scope for completed transactions
+     * Scope for completed payments
      */
     public function scopeCompleted(Builder $query): Builder
     {
@@ -56,7 +56,7 @@ class Transaction extends Model
     }
 
     /**
-     * Scope for pending transactions
+     * Scope for pending payments
      */
     public function scopePending(Builder $query): Builder
     {
@@ -64,7 +64,7 @@ class Transaction extends Model
     }
 
     /**
-     * Scope for cancelled transactions
+     * Scope for cancelled payments
      */
     public function scopeCancelled(Builder $query): Builder
     {
@@ -72,7 +72,7 @@ class Transaction extends Model
     }
 
     /**
-     * Scope for failed transactions
+     * Scope for failed payments
      */
     public function scopeFailed(Builder $query): Builder
     {
@@ -96,7 +96,7 @@ class Transaction extends Model
     }
 
     /**
-     * Check if transaction is successful
+     * Check if payment is successful
      */
     public function isSuccessful(): bool
     {
@@ -104,7 +104,7 @@ class Transaction extends Model
     }
 
     /**
-     * Check if transaction is pending
+     * Check if payment is pending
      */
     public function isPending(): bool
     {
@@ -112,7 +112,7 @@ class Transaction extends Model
     }
 
     /**
-     * Check if transaction is cancelled
+     * Check if payment is cancelled
      */
     public function isCancelled(): bool
     {
@@ -120,7 +120,7 @@ class Transaction extends Model
     }
 
     /**
-     * Check if transaction failed
+     * Check if payment failed
      */
     public function isFailed(): bool
     {
@@ -128,7 +128,7 @@ class Transaction extends Model
     }
 
     /**
-     * Mark transaction as completed
+     * Mark payment as completed
      */
     public function markAsCompleted(): bool
     {
@@ -139,7 +139,7 @@ class Transaction extends Model
     }
 
     /**
-     * Mark transaction as failed
+     * Mark payment as failed
      */
     public function markAsFailed(string $reason = null): bool
     {

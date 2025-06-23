@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('transactions', function (Blueprint $table) {
+        Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->string('reference', 64)->unique();
             $table->unsignedBigInteger('amount'); // Stored in kobo (1/100 of NGN)
             $table->string('terminal_serial', 64)->index();
-            $table->string('transaction_type', 32)->default('PURCHASE');
+            $table->string('payment_type', 32)->default('PURCHASE');
             $table->string('payment_method', 32)->default('ANY');
             $table->enum('status', [
                 'PENDING',
@@ -45,6 +45,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('transactions');
+        Schema::dropIfExists('payments');
     }
 };
