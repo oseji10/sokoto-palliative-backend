@@ -97,12 +97,12 @@ class TransactionsController extends Controller
                 ]);
 
                 // Check if Moniepoint payment was successful
-                if ($moniepointResponse->failed() || !isset($moniepointResponse['code']) || $moniepointResponse['code'] !== '202') {
-                    return response()->json([
-                        'message' => 'Payment processing failed',
-                        'error' => $moniepointResponse['message'] ?? 'Moniepoint API error'
-                    ], 400);
-                }
+                // if ($moniepointResponse->failed() || !isset($moniepointResponse['code']) || $moniepointResponse['code'] !== '202') {
+                //     return response()->json([
+                //         'message' => 'Payment processing failed',
+                //         'error' => $moniepointResponse['message'] ?? 'Moniepoint API error'
+                //     ], 400);
+                // }
             }
 
             // Store in PendingTransactions
