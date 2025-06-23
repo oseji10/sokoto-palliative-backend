@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Models\BeneficiaryType;
 use App\Models\BeneficiaryImage;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 
 class BeneficiariesController extends Controller
 {
@@ -127,6 +129,19 @@ class BeneficiariesController extends Controller
 
     $imagePath = $request->file('image')->store('beneficiary_images', 'public');
         
+   // Full path in storage
+    $source = storage_path('app/public/' . $imagePath);
+
+    // Destination path in public/storage
+    $destination = public_path('storage/' . $imagePath);
+
+    // Ensure destination folder exists
+    File::ensureDirectoryExists(dirname($destination));
+
+    // Copy the file from storage to public
+    File::copy($source, $destination);
+
+
         // Assuming you have a ProductImage model to handle product images
         $beneficiary->beneficiary_image()->create([
             'imagePath' => $imagePath,

@@ -24,13 +24,13 @@ class AppServiceProvider extends ServiceProvider
 
 public function boot()
 {
-    if (!file_exists(public_path('storage'))) {
-        try {
-            Artisan::call('storage:link');
-        } catch (\Throwable $e) {
-            Log::warning('Storage link failed (probably due to exec() being disabled): ' . $e->getMessage());
-        }
-    }
+    // if (!file_exists(public_path('storage'))) {
+    //     try {
+    //         Artisan::call('storage:link');
+    //     } catch (\Throwable $e) {
+    //         Log::warning('Storage link failed (probably due to exec() being disabled): ' . $e->getMessage());
+    //     }
+    // }
 }
 
 }
