@@ -42,4 +42,9 @@ class Transactions extends Model
     {
         return $this->hasMany(TransactionProducts::class, 'transactionId', 'transactionId');
     }
+
+    public function seller()
+    {
+        return $this->belongsTo(User::class, 'soldBy', 'id');
+    }
 }

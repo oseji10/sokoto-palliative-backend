@@ -16,7 +16,7 @@ class TransactionsController extends Controller
 {
     public function index()
     {
-        $transactions = Transactions::with('transaction_products.products')
+        $transactions = Transactions::with('transaction_products.products', 'beneficiary', 'seller')
         ->orderBy('created_at', 'desc')
         ->get();
         return response()->json($transactions);
