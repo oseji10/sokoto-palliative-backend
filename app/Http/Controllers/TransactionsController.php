@@ -122,7 +122,7 @@ class TransactionsController extends Controller
             'moniepoint_status' => $moniepointResponse->status(),
         ], $moniepointResponse->status());
     }
-}
+
 
 
                 
