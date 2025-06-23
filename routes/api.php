@@ -2,21 +2,22 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\CancerController;
-use App\Http\Controllers\BeneficiariesController;
-use App\Http\Controllers\HospitalController;
 use App\Http\Controllers\LgaController;
-use App\Http\Controllers\ProductsController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CadreController;
 use App\Http\Controllers\RolesController;
 use App\Http\Controllers\StateController;
-use App\Http\Controllers\UsersController;
-use App\Http\Controllers\MinistryController;
-use App\Http\Controllers\CadreController;
-use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\StockController;
-use App\Http\Controllers\ProductRequestController;
+use App\Http\Controllers\UsersController;
+use App\Http\Controllers\CancerController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\HospitalController;
+use App\Http\Controllers\MinistryController;
+use App\Http\Controllers\ProductsController;
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\TransactionsController;
+use App\Http\Controllers\BeneficiariesController;
+use App\Http\Controllers\ProductRequestController;
 
 /*
 |--------------------------------------------------------------------------
@@ -137,5 +138,9 @@ use App\Http\Controllers\TransactionsController;
 
         
         Route::get('analytics/total-users', [AnalyticsController::class, 'getTotalBeneficiaries']);
+
+        Route::post('moniepoint/payment/push', [PaymentController::class, 'pushPayment']);
+
+        Route::get('moniepoint/transaction/{merchantReference}/status', [PaymentController::class, 'getTransactionStatus']);
     });
 // });
