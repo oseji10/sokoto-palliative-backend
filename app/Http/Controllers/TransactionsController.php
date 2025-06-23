@@ -99,17 +99,17 @@ class TransactionsController extends Controller
     ]);
 
     // ✅ Check if the request was successful
-    if ($moniepointResponse->status() === 202) {
+    if ($moniepointResponse->code() === 202) {
         return response()->json([
             'status' => 'success',
             'message' => 'Payment request accepted by Moniepoint.',
-            'moniepoint_status' => $moniepointResponse->status(),
+            'moniepoint_status' => $moniepointResponse->code(),
             'moniepoint_description' => 'Accepted'
         ], 202);
     } else {
         // Log full Moniepoint response for debugging
         \Log::error('Moniepoint failed', [
-            'status' => $moniepointResponse->status(),
+            'status' => $moniepointResponse->code(),
             'body' => $moniepointResponse->body()
         ]);
 
