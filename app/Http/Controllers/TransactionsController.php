@@ -85,17 +85,45 @@ class TransactionsController extends Controller
 
             // Call Moniepoint API for outright payments
             if ($request->paymentMethod === 'outright') {
-                $totalCostInKobo = $totalCost; // Convert to kobo
-                $moniepointResponse = Http::withHeaders([
-                    'Authorization' => 'Bearer mptp_a72e62d6220b4c279f05f0d90c71f79b_cce5ff',
-                    'Cookie' => '__cf_bm=llJAllZZ4ww_EAgd7WsHAiW9Xhdt5tOKkWsvByK6X2c-1750629087-1.0.1.1-2zOUQHrb5PyiYLrXqoA6kiONrHhKIZ2z7ifHO.iSk1Ue539LjL8bhuUWeZ7RaafQfCvMnh9Ke08Ks7Kkt4k0T2H0uJb89.aTwZt52.qkpyM'
-                ])->post('https://api.pos.moniepoint.com/v1/transactions', [
-                    'terminalSerial' => 'P260302358597',
-                    'amount' => $totalCostInKobo,
-                    'merchantReference' => $transactionId,
-                    'transactionType' => 'PURCHASE',
-                    'paymentMethod' => 'CARD_PURCHASE'
-                ]);
+    $totalCostInKobo = $totalCost;
+
+    $moniepointResponse = Http::withHeaders([
+        'Authorization' => 'Bearer mptp_a72e62d6220b4c279f05f0d90c71f79b_cce5ff',
+        'Cookie' => '__cf_bm=your_cookie_here'
+    ])->post('https://api.pos.moniepoint.com/v1/transactions', [
+        'terminalSerial' => 'P260302358597',
+        'amount' => $totalCostInKobo,
+        'merchantReference' => $transactionId,
+        'transactionType' => 'PURCHASE',
+        'paymentMethod' => 'CARD_PURCHASE'
+    ]);
+
+    // ✅ Check if the request was successful
+    if ($moniepointResponse->status() === 202) {
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Payment request accepted by Moniepoint.',
+            'moniepoint_status' => $moniepointResponse->status(),
+            'moniepoint_description' => 'Accepted'
+        ], 202);
+    } else {
+        // Log full Moniepoint response for debugging
+        \Log::error('Moniepoint failed', [
+            'status' => $moniepointResponse->status(),
+            'body' => $moniepointResponse->body()
+        ]);
+
+        // Decode response body if it's JSON
+        $errorMessage = $moniepointResponse->json('error') ?? 'Payment request failed.';
+
+        return response()->json([
+            'status' => 'error',
+            'message' => $errorMessage,
+            'moniepoint_status' => $moniepointResponse->status(),
+        ], $moniepointResponse->status());
+    }
+}
+
 
                 
                 // Check if Moniepoint payment was successful
