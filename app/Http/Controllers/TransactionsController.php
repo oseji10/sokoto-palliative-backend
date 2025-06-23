@@ -34,134 +34,128 @@ class TransactionsController extends Controller
     }
 
     
-
-   public function initiate(Request $request): JsonResponse
-    {
-        // Validate the incoming request
-        $validator = Validator::make($request->all(), [
-            'beneficiaryId' => 'required|exists:beneficiaries,beneficiaryId',
-            'products' => 'required|array|min:1',
-            'products.*.productId' => 'required|exists:products,productId',
-            'products.*.quantity' => 'required|integer|min:1',
-            'paymentMethod' => 'required|in:outright,loan',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            // Calculate total cost and validate stock
-            $products = $request->products;
-            $totalCost = 0;
-
-            foreach ($products as $product) {
-                $productId = $product['productId'];
-                $quantity = $product['quantity'];
-
-                $productModel = Products::find($productId);
-                if (!$productModel) {
-                    throw new \Exception("Product not found for product ID {$productId}");
-                }
-
-                $stock = Stock::where('productId', $productId)->first();
-                if (!$stock) {
-                    throw new \Exception("Stock not found for product ID {$productId}");
-                }
-
-                $availableStock = $stock->quantityReceived - ($stock->quantitySold ?? 0);
-                if ($quantity > $availableStock) {
-                    throw new \Exception("Insufficient stock for product ID {$productId}. Available: {$availableStock}, Requested: {$quantity}");
-                }
-
-                $totalCost += $productModel->cost * $quantity;
-            }
-
-            // Generate a random transaction ID
-            $transactionId = Str::random(12);
-
-            // Call Moniepoint API for outright payments
-            if ($request->paymentMethod === 'outright') {
-    $totalCostInKobo = $totalCost;
-
-    $moniepointResponse = Http::withHeaders([
-        'Authorization' => 'Bearer mptp_a72e62d6220b4c279f05f0d90c71f79b_cce5ff',
-        'Cookie' => '__cf_bm=llJAllZZ4ww_EAgd7WsHAiW9Xhdt5tOKkWsvByK6X2c-1750629087-1.0.1.1-2zOUQHrb5PyiYLrXqoA6kiONrHhKIZ2z7ifHO.iSk1Ue539LjL8bhuUWeZ7RaafQfCvMnh9Ke08Ks7Kkt4k0T2H0uJb89.aTwZt52.qkpyM'
-    ])->post('https://api.pos.moniepoint.com/v1/transactions', [
-        'terminalSerial' => 'P260302358597',
-        'amount' => $totalCostInKobo,
-        'merchantReference' => $transactionId,
-        'transactionType' => 'PURCHASE',
-        'paymentMethod' => 'CARD_PURCHASE'
+public function initiate(Request $request): JsonResponse
+{
+    // Validate the incoming request
+    $validator = Validator::make($request->all(), [
+        'beneficiaryId' => 'required|exists:beneficiaries,beneficiaryId',
+        'products' => 'required|array|min:1',
+        'products.*.productId' => 'required|exists:products,productId',
+        'products.*.quantity' => 'required|integer|min:1',
+        'paymentMethod' => 'required|in:outright,loan',
     ]);
 
-    // ✅ Check if the request was successful
-    if ($moniepointResponse->status() === 202) {
+    if ($validator->fails()) {
         return response()->json([
-            'status' => 'success',
-            'message' => 'Payment request accepted by Moniepoint.',
-            'moniepoint_status' => $moniepointResponse->status(),
-            'moniepoint_description' => 'Accepted'
-        ], 202);
-    } else {
-        // Log full Moniepoint response for debugging
-        \Log::error('Moniepoint failed', [
-            'status' => $moniepointResponse->status(),
-            'body' => $moniepointResponse->body()
-        ]);
-
-        // Decode response body if it's JSON
-        $errorMessage = $moniepointResponse->json('error') ?? 'Payment request failed.';
-
-        return response()->json([
-            'status' => 'error',
-            'message' => $errorMessage,
-            'moniepoint_status' => $moniepointResponse->status(),
-        ], $moniepointResponse->status());
+            'message' => 'Validation failed',
+            'errors' => $validator->errors(),
+        ], 422);
     }
 
+    DB::beginTransaction();
+    try {
+        // Calculate total cost and validate stock
+        $products = $request->products;
+        $totalCost = 0;
 
+        foreach ($products as $product) {
+            $productId = $product['productId'];
+            $quantity = $product['quantity'];
 
-                
-                // Check if Moniepoint payment was successful
-                // if ($moniepointResponse->failed() || !isset($moniepointResponse['code']) || $moniepointResponse['code'] !== '202') {
-                //     return response()->json([
-                //         'message' => 'Payment processing failed',
-                //         'error' => $moniepointResponse['message'] ?? 'Moniepoint API error'
-                //     ], 400);
-                // }
+            $productModel = Products::findOrFail($productId);
+            $stock = Stock::where('productId', $productId)->lockForUpdate()->firstOrFail();
+            $availableStock = $stock->quantityReceived - ($stock->quantitySold ?? 0);
+
+            if ($quantity > $availableStock) {
+                throw new \Exception("Insufficient stock for product ID {$productId}. Available: {$availableStock}, Requested: {$quantity}");
             }
 
-            // Store in PendingTransactions
-            $pendingTransaction = PendingTransactions::create([
-                'transactionId' => $transactionId,
-                'beneficiaryId' => $request->beneficiaryId,
-                'paymentMethod' => $request->paymentMethod,
-                'products' => json_encode($products),
-                'totalCost' => $totalCost,
-                'status' => $request->paymentMethod === 'outright' ? 'completed' : 'pending',
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now(),
+            $stock->quantitySold += $quantity;
+            $stock->save();
+
+            $totalCost += $productModel->cost * $quantity;
+        }
+
+        if ($totalCost <= 0) {
+            throw new \Exception('Invalid total cost calculated.');
+        }
+
+        // Handle loan payments
+        if ($request->paymentMethod === 'loan') {
+            throw new \Exception('Loan payments are not yet supported.');
+        }
+
+        // Generate a random transaction ID
+        $transactionId = Str::random(12);
+
+        // Call Moniepoint API for outright payments
+        if ($request->paymentMethod === 'outright') {
+            $totalCostInKobo = $totalCost * 100; // Convert Naira to Kobo
+
+            $moniepointResponse = Http::withHeaders([
+                'Authorization' => 'Bearer ' . env('MONIEPOINT_API_TOKEN'),
+                'Cookie' => env('MONIEPOINT_COOKIE'),
+            ])->post('https://api.pos.moniepoint.com/v1/transactions', [
+                'terminalSerial' => 'P260302358597',
+                'amount' => $totalCostInKobo,
+                'merchantReference' => $transactionId,
+                'transactionType' => 'PURCHASE',
+                'paymentMethod' => 'CARD_PURCHASE',
             ]);
 
-            return response()->json([$moniepointResponse],200);
+            if ($moniepointResponse->status() === 202) {
+                // Store in PendingTransactions
+                $pendingTransaction = PendingTransactions::create([
+                    'transactionId' => $transactionId,
+                    'beneficiaryId' => $request->beneficiaryId,
+                    'paymentMethod' => $request->paymentMethod,
+                    'products' => json_encode($products),
+                    'totalCost' => $totalCost,
+                    'status' => 'pending', // Pending until confirmed by webhook
+                ]);
 
-            // return response()->json([
-            //     'transactionId' => $transactionId,
-            //     'status' => $pendingTransaction->status
-            // ], 200);
+                \Log::info('Payment request accepted', [
+                    'transactionId' => $transactionId,
+                    'moniepointStatus' => $moniepointResponse->status(),
+                ]);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to initiate transaction',
-                'error' => $e->getMessage()
-            ], 500);
+                DB::commit();
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Payment request accepted by Moniepoint.',
+                    'moniepointStatus' => $moniepointResponse->status(),
+                    'moniepointDescription' => 'Accepted',
+                    'transactionId' => $transactionId,
+                ], 202);
+            } else {
+                \Log::error('Moniepoint failed', [
+                    'status' => $moniepointResponse->status(),
+                    'body' => $moniepointResponse->body(),
+                ]);
+
+                $responseBody = $moniepointResponse->json();
+                $errorMessage = $responseBody['error'] ?? $responseBody['message'] ?? 'Payment request failed.';
+
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $errorMessage,
+                    'moniepoint_status' => $moniepointResponse->status(),
+                ], $moniepointResponse->status());
+            }
         }
-    }
 
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Transaction initiation failed', ['error' => $e->getMessage()]);
+        return response()->json([
+            'message' => 'Failed to initiate transaction',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
     public function confirm(Request $request, string $transactionId): JsonResponse
     {
         try {
