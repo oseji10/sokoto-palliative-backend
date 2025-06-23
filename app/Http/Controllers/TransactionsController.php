@@ -100,25 +100,26 @@ class TransactionsController extends Controller
 
     // ✅ Check if the request was successful
     if ($moniepointResponse->status() === 202) {
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Payment request accepted by Moniepoint.',
-            'moniepointStatus' => $moniepointResponse->status(),
-            'moniepointDescription' => 'Accepted'
-        ], 202);
 
-           // Store in PendingTransactions
-            $pendingTransaction = PendingTransactions::create([
-                'transactionId' => $transactionId,
-                'beneficiaryId' => $request->beneficiaryId,
-                'paymentMethod' => $request->paymentMethod,
-                'products' => json_encode($products),
-                'totalCost' => $totalCost,
-                'status' => $request->paymentMethod === 'outright' ? 'completed' : 'pending',
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now(),
-            ]);
-            
+    // Store in PendingTransactions
+    $pendingTransaction = PendingTransactions::create([
+        'transactionId' => $transactionId,
+        'beneficiaryId' => $request->beneficiaryId,
+        'paymentMethod' => $request->paymentMethod,
+        'products' => json_encode($products),
+        'totalCost' => $totalCost,
+        'status' => $request->paymentMethod === 'outright' ? 'completed' : 'pending',
+        'created_at' => Carbon::now(),
+        'updated_at' => Carbon::now(),
+    ]);
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Payment request accepted by Moniepoint.',
+        'moniepointStatus' => $moniepointResponse->status(),
+        'moniepointDescription' => 'Accepted'
+    ], 202);
+        
     } else {
         // Log full Moniepoint response for debugging
         \Log::error('Moniepoint failed', [
@@ -137,7 +138,7 @@ class TransactionsController extends Controller
     }
 
 
-            }
+}
 
          
 
