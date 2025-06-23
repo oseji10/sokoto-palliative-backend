@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
+
 class TransactionsController extends Controller
 {
     public function index()
@@ -32,128 +34,171 @@ class TransactionsController extends Controller
 
     
 
-    public function store(Request $request): JsonResponse
-{
-    // Validate the incoming request
-    $validator = Validator::make($request->all(), [
-        'beneficiaryId' => 'required|exists:beneficiaries,beneficiaryId',
-        'products' => 'required|array|min:1',
-        'products.*.productId' => 'required|exists:products,productId',
-        'products.*.quantity' => 'required|integer|min:1',
-        'paymentMethod' => 'required|in:outright,loan', // Added validation for paymentMethod
-    ]);
+   public function store(Request $request): JsonResponse
+    {
+        // Validate the incoming request
+        $validator = Validator::make($request->all(), [
+            'beneficiaryId' => 'required|exists:beneficiaries,beneficiaryId',
+            'products' => 'required|array|min:1',
+            'products.*.productId' => 'required|exists:products,productId',
+            'products.*.quantity' => 'required|integer|min:1',
+            'paymentMethod' => 'required|in:outright,loan',
+        ]);
 
-    if ($validator->fails()) {
-        return response()->json([
-            'message' => 'Validation failed',
-            'errors' => $validator->errors()
-        ], 422);
-    }
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
-    try {
-        // Begin a database transaction
-        return DB::transaction(function () use ($request) {
-            // Generate a random transaction ID
-            $transactionId = Str::random(12);
-
-            // Get authenticated user
-            $user = auth()->user();
-            if (!$user || !$user->staff) {
-                throw new \Exception('Authenticated user or staff data not found');
-            }
-
-            // Create the transaction
-            $transaction = Transactions::create([
-                'transactionId' => $transactionId,
-                'beneficiary' => $request->beneficiaryId,
-                'paymentMethod' => $request->paymentMethod,
-                'lga' => $user->staff->lga,
-                'soldBy' => $user->id,
-                'status' => 'pending',
-                
-            ]);
-
-            // Process each product
+        try {
+            // Calculate total cost for Moniepoint API
             $products = $request->products;
-            $transactionProducts = [];
+            $totalCost = 0;
 
             foreach ($products as $product) {
                 $productId = $product['productId'];
                 $quantity = $product['quantity'];
 
-                // Fetch product details (including price)
                 $productModel = Products::find($productId);
                 if (!$productModel) {
                     throw new \Exception("Product not found for product ID {$productId}");
                 }
 
-                // Check stock availability
-                $stock = Stock::where('productId', $productId)->first();
-                if (!$stock) {
-                    throw new \Exception("Stock not found for product ID {$productId}");
-                }
-
-                $availableStock = $stock->quantityReceived - (
-                    ($stock->quantitySold ?? 0)
-                );
-
-                if ($quantity > $availableStock) {
-                    throw new \Exception("Insufficient stock for product ID {$productId}. Available: {$availableStock}, Requested: {$quantity}");
-                }
-
-                // Create transaction product entry
-                $transactionProducts[] = [
-                    'transactionId' => $transactionId,
-                    'productId' => $productId,
-                    'quantitySold' => $quantity,
-                    'cost' => $productModel->cost, // Store product price
-                    'created_at' => Carbon::now(),
-                    'updated_at' => Carbon::now(),
-                ];
-
-                // Update stock (increment quantity_sold)
-                $stock->increment('quantitySold', $quantity);
+                $totalCost += $productModel->cost * $quantity;
             }
 
-            // Insert transaction products
-            TransactionProducts::insert($transactionProducts);
+            // Convert total cost to kobo (assuming NGN)
+            $totalCostInKobo = $totalCost * 100;
 
-            // Fetch the transaction with related data
-            $transaction = Transactions::with(['beneficiary', 'products.product', 'transaction_products.products'])
-                ->where('transactionId', $transactionId)
-                ->firstOrFail();
+            // Generate a random transaction ID
+            $transactionId = Str::random(12);
 
-            // Format response
-      $response = [
-    'transactionId' => $transaction->transactionId,
-    'beneficiary' => $transaction->beneficiary, // You probably want full data, not just ID
-    'status' => $transaction->status,
-    'paymentMethod' => $transaction->paymentMethod,
-    
-    // Map over all transaction_products
-    'products' => $transaction->transaction_products->map(function ($transactionProduct) {
-        return [
-            'productId' => $transactionProduct->productId,
-            'productName' => $transactionProduct->product->productName ?? 'Unknown Product',
-            'quantitySold' => $transactionProduct->quantitySold,
-            'cost' => $transactionProduct->cost,
-        ];
-    })->toArray(),
-];
+            // Call Moniepoint API for outright payments
+            if ($request->paymentMethod === 'outright') {
+                $moniepointResponse = Http::withHeaders([
+                    'Authorization' => 'Bearer mptp_a72e62d6220b4c279f05f0d90c71f79b_cce5ff',
+                    'Cookie' => '__cf_bm=llJAllZZ4ww_EAgd7WsHAiW9Xhdt5tOKkWsvByK6X2c-1750629087-1.0.1.1-2zOUQHrb5PyiYLrXqoA6kiONrHhKIZ2z7ifHO.iSk1Ue539LjL8bhuUWeZ7RaafQfCvMnh9Ke08Ks7Kkt4k0T2H0uJb89.aTwZt52.qkpyM'
+                ])->post('https://api.pos.moniepoint.com/v1/transactions', [
+                    'terminalSerial' => 'P260302358597',
+                    'amount' => $totalCostInKobo,
+                    'merchantReference' => $transactionId,
+                    'transactionType' => 'PURCHASE',
+                    'paymentMethod' => 'CARD_PURCHASE'
+                ]);
 
+                // Check if Moniepoint payment was successful
+                if ($moniepointResponse->failed() || !isset($moniepointResponse['status']) || $moniepointResponse['status'] !== 'SUCCESS') {
+                    return response()->json([
+                        'message' => 'Payment processing failed',
+                        'error' => $moniepointResponse['message'] ?? 'Moniepoint API error'
+                    ], 400);
+                }
+            }
 
+            // Begin a database transaction
+            return DB::transaction(function () use ($request, $transactionId, $products) {
+                // Get authenticated user
+                $user = auth()->user();
+                if (!$user || !$user->staff) {
+                    throw new \Exception('Authenticated user or staff data not found');
+                }
 
+                // Create the transaction
+                $transaction = Transactions::create([
+                    'transactionId' => $transactionId,
+                    'beneficiary' => $request->beneficiaryId,
+                    'paymentMethod' => $request->paymentMethod,
+                    'lga' => $user->staff->lga,
+                    'soldBy' => $user->id,
+                    'status' => $request->paymentMethod === 'outright' ? 'completed' : 'pending',
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ]);
 
-            return response()->json($response, 201);
-        });
-    } catch (\Exception $e) {
-        return response()->json([
-            'message' => 'Failed to create transaction',
-            'error' => $e->getMessage()
-        ], 500);
+                // Process each product
+                $transactionProducts = [];
+                foreach ($products as $product) {
+                    $productId = $product['productId'];
+                    $quantity = $product['quantity'];
+
+                    // Fetch product details
+                    $productModel = Products::findOrFail($productId);
+
+                    // Check stock availability
+                    $stock = Stock::where('productId', $productId)->firstOrFail();
+                    $availableStock = $stock->quantityReceived - ($stock->quantitySold ?? 0);
+
+                    if ($quantity > $availableStock) {
+                        throw new \Exception("Insufficient stock for product ID {$productId}. Available: {$availableStock}, Requested: {$quantity}");
+                    }
+
+                    // Create transaction product entry
+                    $transactionProducts[] = [
+                        'transactionId' => $transactionId,
+                        'productId' => $productId,
+                        'quantitySold' => $quantity,
+                        'cost' => $productModel->cost,
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now(),
+                    ];
+
+                    // Update stock
+                    $stock->increment('quantitySold', $quantity);
+                }
+
+                // Insert transaction products
+                TransactionProducts::insert($transactionProducts);
+
+                // Fetch the transaction with related data
+                $transaction = Transactions::with(['beneficiary', 'transaction_products.products'])
+                    ->where('transactionId', $transactionId)
+                    ->firstOrFail();
+
+                // Format response
+                $response = [
+                    'id' => $transaction->id,
+                    'beneficiary' => $transaction->beneficiary,
+                    'transactionId' => $transaction->transactionId,
+                    'lga' => $transaction->lga,
+                    'soldBy' => $transaction->soldBy,
+                    'paymentMethod' => $transaction->paymentMethod,
+                    'status' => $transaction->status,
+                    'created_at' => $transaction->created_at->toIso8601String(),
+                    'updated_at' => $transaction->updated_at->toIso8601String(),
+                    'transaction_products' => $transaction->transaction_products->map(function ($transactionProduct) {
+                        return [
+                            'id' => $transactionProduct->id,
+                            'transactionId' => $transactionProduct->transactionId,
+                            'productId' => $transactionProduct->productId,
+                            'quantitySold' => (string) $transactionProduct->quantitySold, // Match API response
+                            'cost' => (string) $transactionProduct->cost, // Match API response
+                            'created_at' => $transactionProduct->created_at ? $transactionProduct->created_at->toIso8601String() : null,
+                            'updated_at' => $transactionProduct->updated_at ? $transactionProduct->updated_at->toIso8601String() : null,
+                            'products' => [
+                                'productId' => $transactionProduct->products->productId,
+                                'productName' => $transactionProduct->products->productName ?? 'Unknown Product',
+                                'productType' => $transactionProduct->products->productType,
+                                'cost' => (string) $transactionProduct->products->cost,
+                                'addedBy' => $transactionProduct->products->addedBy,
+                                'status' => $transactionProduct->products->status,
+                                'created_at' => $transactionProduct->products->created_at->toIso8601String(),
+                                'updated_at' => $transactionProduct->products->updated_at->toIso8601String(),
+                            ]
+                        ];
+                    })->toArray(),
+                ];
+
+                return response()->json($response, 201);
+            });
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to create transaction',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
-
 
     
     public function update(Request $request, $transactionId)
