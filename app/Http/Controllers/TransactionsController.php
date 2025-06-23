@@ -97,6 +97,7 @@ class TransactionsController extends Controller
                     'paymentMethod' => 'CARD_PURCHASE'
                 ]);
 
+                
                 // Check if Moniepoint payment was successful
                 // if ($moniepointResponse->failed() || !isset($moniepointResponse['code']) || $moniepointResponse['code'] !== '202') {
                 //     return response()->json([
@@ -118,10 +119,12 @@ class TransactionsController extends Controller
                 'updated_at' => Carbon::now(),
             ]);
 
-            return response()->json([
-                'transactionId' => $transactionId,
-                'status' => $pendingTransaction->status
-            ], 200);
+            return $moniepointResponse;
+
+            // return response()->json([
+            //     'transactionId' => $transactionId,
+            //     'status' => $pendingTransaction->status
+            // ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
