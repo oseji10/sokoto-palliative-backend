@@ -34,7 +34,7 @@ class TransactionsController extends Controller
 
     
 
-   public function store(Request $request): JsonResponse
+   public function initiate(Request $request): JsonResponse
     {
         // Validate the incoming request
         $validator = Validator::make($request->all(), [
@@ -53,7 +53,7 @@ class TransactionsController extends Controller
         }
 
         try {
-            // Calculate total cost for Moniepoint API
+            // Calculate total cost and validate stock
             $products = $request->products;
             $totalCost = 0;
 
@@ -66,17 +66,25 @@ class TransactionsController extends Controller
                     throw new \Exception("Product not found for product ID {$productId}");
                 }
 
+                $stock = Stock::where('productId', $productId)->first();
+                if (!$stock) {
+                    throw new \Exception("Stock not found for product ID {$productId}");
+                }
+
+                $availableStock = $stock->quantityReceived - ($stock->quantitySold ?? 0);
+                if ($quantity > $availableStock) {
+                    throw new \Exception("Insufficient stock for product ID {$productId}. Available: {$availableStock}, Requested: {$quantity}");
+                }
+
                 $totalCost += $productModel->cost * $quantity;
             }
-
-            // Convert total cost to kobo (assuming NGN)
-            $totalCostInKobo = $totalCost * 100;
 
             // Generate a random transaction ID
             $transactionId = Str::random(12);
 
             // Call Moniepoint API for outright payments
             if ($request->paymentMethod === 'outright') {
+                $totalCostInKobo = $totalCost * 100; // Convert to kobo
                 $moniepointResponse = Http::withHeaders([
                     'Authorization' => 'Bearer mptp_a72e62d6220b4c279f05f0d90c71f79b_cce5ff',
                     'Cookie' => '__cf_bm=llJAllZZ4ww_EAgd7WsHAiW9Xhdt5tOKkWsvByK6X2c-1750629087-1.0.1.1-2zOUQHrb5PyiYLrXqoA6kiONrHhKIZ2z7ifHO.iSk1Ue539LjL8bhuUWeZ7RaafQfCvMnh9Ke08Ks7Kkt4k0T2H0uJb89.aTwZt52.qkpyM'
@@ -97,8 +105,58 @@ class TransactionsController extends Controller
                 }
             }
 
+            // Store in PendingTransactions
+            $pendingTransaction = PendingTransactions::create([
+                'transactionId' => $transactionId,
+                'beneficiaryId' => $request->beneficiaryId,
+                'paymentMethod' => $request->paymentMethod,
+                'products' => json_encode($products),
+                'totalCost' => $totalCost,
+                'status' => $request->paymentMethod === 'outright' ? 'completed' : 'pending',
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]);
+
+            return response()->json([
+                'transactionId' => $transactionId,
+                'status' => $pendingTransaction->status
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to initiate transaction',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function confirm(Request $request, string $transactionId): JsonResponse
+    {
+        try {
+            // Find pending transaction
+            $pendingTransaction = PendingTransactions::where('transactionId', $transactionId)->first();
+            if (!$pendingTransaction) {
+                return response()->json([
+                    'message' => 'Pending transaction not found'
+                ], 404);
+            }
+
+            // If already processed, return existing transaction
+            $existingTransaction = Transactions::where('transactionId', $transactionId)->first();
+            if ($existingTransaction) {
+                return response()->json($existingTransaction, 200);
+            }
+
+            // For outright, ensure payment was completed
+            if ($pendingTransaction->paymentMethod === 'outright' && $pendingTransaction->status !== 'completed') {
+                return response()->json([
+                    'message' => 'Payment not confirmed',
+                    'status' => 'failed'
+                ], 400);
+            }
+
             // Begin a database transaction
-            return DB::transaction(function () use ($request, $transactionId, $products) {
+            return DB::transaction(function () use ($pendingTransaction, $transactionId) {
                 // Get authenticated user
                 $user = auth()->user();
                 if (!$user || !$user->staff) {
@@ -108,17 +166,19 @@ class TransactionsController extends Controller
                 // Create the transaction
                 $transaction = Transactions::create([
                     'transactionId' => $transactionId,
-                    'beneficiary' => $request->beneficiaryId,
-                    'paymentMethod' => $request->paymentMethod,
+                    'beneficiary' => $pendingTransaction->beneficiaryId,
+                    'paymentMethod' => $pendingTransaction->paymentMethod,
                     'lga' => $user->staff->lga,
                     'soldBy' => $user->id,
-                    'status' => $request->paymentMethod === 'outright' ? 'completed' : 'pending',
+                    'status' => $pendingTransaction->status,
                     'created_at' => Carbon::now(),
                     'updated_at' => Carbon::now(),
                 ]);
 
-                // Process each product
+                // Process products
+                $products = json_decode($pendingTransaction->products, true);
                 $transactionProducts = [];
+
                 foreach ($products as $product) {
                     $productId = $product['productId'];
                     $quantity = $product['quantity'];
@@ -151,6 +211,9 @@ class TransactionsController extends Controller
                 // Insert transaction products
                 TransactionProducts::insert($transactionProducts);
 
+                // Delete pending transaction
+                $pendingTransaction->delete();
+
                 // Fetch the transaction with related data
                 $transaction = Transactions::with(['beneficiary', 'transaction_products.products'])
                     ->where('transactionId', $transactionId)
@@ -172,8 +235,8 @@ class TransactionsController extends Controller
                             'id' => $transactionProduct->id,
                             'transactionId' => $transactionProduct->transactionId,
                             'productId' => $transactionProduct->productId,
-                            'quantitySold' => (string) $transactionProduct->quantitySold, // Match API response
-                            'cost' => (string) $transactionProduct->cost, // Match API response
+                            'quantitySold' => (string) $transactionProduct->quantitySold,
+                            'cost' => (string) $transactionProduct->cost,
                             'created_at' => $transactionProduct->created_at ? $transactionProduct->created_at->toIso8601String() : null,
                             'updated_at' => $transactionProduct->updated_at ? $transactionProduct->updated_at->toIso8601String() : null,
                             'products' => [
@@ -190,16 +253,17 @@ class TransactionsController extends Controller
                     })->toArray(),
                 ];
 
-                return response()->json($response, 201);
+                return response()->json($response, 200);
             });
+
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Failed to create transaction',
-                'error' => $e->getMessage()
+                'message' => 'Failed to confirm transaction',
+                'error' => $e->getMessage(),
+                'status' => 'failed'
             ], 500);
         }
     }
-
     
     public function update(Request $request, $transactionId)
     {

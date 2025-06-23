@@ -83,7 +83,9 @@ use App\Http\Controllers\TransactionsController;
         // Transaction route
         Route::get('/transactions', [TransactionsController::class, 'index']);
         Route::get('/transactions/{transactionId}', [TransactionsController::class, 'show']);
-        Route::post('/transactions', [TransactionsController::class, 'store']);
+        Route::post('/transactions', [TransactionsController::class, 'initiate']);
+        // Route::post('/transactions', [TransactionsController::class, 'store']);
+
         Route::put('/transactions/{transactionId}/edit', [TransactionsController::class, 'update']);
         Route::delete('/transactions/{transactionId}/delete', [TransactionsController::class, 'destroy']);
         Route::get('/users/search', [BeneficiariesController::class, 'getOneBeneficiary']);
