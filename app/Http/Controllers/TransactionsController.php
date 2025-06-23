@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Transactions;
 use App\Models\TransactionProducts;
+use App\Models\PendingTransactions;
 use App\Models\Products;
 use App\Models\Stock;
 use Illuminate\Http\JsonResponse;
