@@ -77,6 +77,7 @@ class BeneficiariesController extends Controller
             'employeeId' => $beneficiary->employeeId ?? $beneficiary->beneficiaryId,
             'firstName' => $beneficiary->firstName,
             'lastName' => $beneficiary->lastName,
+            'cardNumber' => $beneficiary->cardNumber,
             'department' => $beneficiary->ministry_info?->name ?? null,
             'salary' => $beneficiary->cadre_info?->salary ?? null,
             'billingSetting' => $beneficiary->beneficiary_type?->billingSetting ?? null,
@@ -102,6 +103,7 @@ class BeneficiariesController extends Controller
         'email' => 'nullable|email|max:255|unique:beneficiaries,email',
         'beneficiaryType' => 'required|integer|exists:beneficiary_type,typeId',
         'ministry' => 'nullable|integer|exists:ministries,ministryId',
+        'cardNumber' => 'nullable|string|max:255',
         'cadre' => 'nullable|integer|exists:cadres,cadreId',
         'employeeId' => 'nullable|string|max:255|unique:beneficiaries,employeeId',
         'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // Adjust validation rules as needed
@@ -159,6 +161,7 @@ class BeneficiariesController extends Controller
         'email' => $beneficiary->email,
         'lga' => $beneficiary->lga_info ? $beneficiary->lga_info->lgaName : null,
         'ministry' => $beneficiary->ministry_info ? $beneficiary->ministry_info->ministryName : null,
+        'cardNumber' => $beneficiary->cardNumber,
         'cadre' => $beneficiary->cadre_info ? $beneficiary->cadre_info->cadreName : null,
         'beneficiaryType' => $beneficiary->beneficiary_type->typeName,
         'enrolledBy' => $beneficiary->enrolled_by->firstName . ' ' . $beneficiary->enrolled_by->lastName,

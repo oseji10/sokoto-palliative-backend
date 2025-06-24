@@ -33,7 +33,7 @@ class Transactions extends Model
         return $this->belongsTo(Stock::class, 'stockId', 'stockId');
     } 
 
-    public function beneficiary()
+    public function beneficiary_info()
     {
         return $this->belongsTo(Beneficiary::class, 'beneficiary', 'beneficiaryId');
     }

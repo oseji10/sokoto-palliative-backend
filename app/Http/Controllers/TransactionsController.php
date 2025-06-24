@@ -13,14 +13,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
-
 use Illuminate\Support\Facades\Http;
 
 class TransactionsController extends Controller
 {
     public function index()
     {
-        $transactions = Transactions::with('transaction_products.products', 'beneficiary', 'seller')
+        $transactions = Transactions::with('transaction_products.products', 'beneficiary_info', 'seller')
         ->orderBy('created_at', 'desc')
         ->get();
         return response()->json($transactions);
@@ -34,6 +33,7 @@ class TransactionsController extends Controller
         return response()->json($transaction);
     }
 
+    
     
 public function initiate(Request $request): JsonResponse
 {
@@ -87,21 +87,23 @@ public function initiate(Request $request): JsonResponse
         }
 
         // Generate a unique transaction ID
-        $transactionId = Str::uuid()->toString();
+        $transactionId = Str::random(12);
 
         if ($request->paymentMethod === 'outright') {
-            $totalCostInKobo = $totalCost * 100; // Convert to kobo
+            // $totalCostInKobo = $totalCost * 100; // Convert to kobo
 
-            $moniepointResponse = Http::withOptions(['verify' => false])->withHeaders([
-                'Authorization' => 'Bearer ' . config('services.moniepoint.token'),
-                'Cookie' => config('services.moniepoint.cookie'), // Ideally, cookies should be handled dynamically
-            ])->post('https://api.pos.moniepoint.com/v1/transactions', [
-                'terminalSerial' => config('services.moniepoint.terminal_serial'),
-                'amount' => $totalCostInKobo,
-                'merchantReference' => $transactionId,
-                'transactionType' => 'PURCHASE',
-                'paymentMethod' => 'CARD_PURCHASE',
-            ]);
+              $moniepointResponse = Http::withOptions([
+    'verify' => false,
+])->withHeaders([
+        'Authorization' => 'Bearer mptp_a72e62d6220b4c279f05f0d90c71f79b_cce5ff',
+        'Cookie' => '__cf_bm=llJAllZZ4ww_EAgd7WsHAiW9Xhdt5tOKkWsvByK6X2c-1750629087-1.0.1.1-2zOUQHrb5PyiYLrXqoA6kiONrHhKIZ2z7ifHO.iSk1Ue539LjL8bhuUWeZ7RaafQfCvMnh9Ke08Ks7Kkt4k0T2H0uJb89.aTwZt52.qkpyM'
+    ])->post('https://api.pos.moniepoint.com/v1/transactions', [
+        'terminalSerial' => 'P260302358597',
+        'amount' => $totalCost,
+        'merchantReference' => $transactionId,
+        'transactionType' => 'PURCHASE',
+        'paymentMethod' => 'CARD_PURCHASE'
+    ]);
 
             // if ($moniepointResponse->successful() && $moniepointResponse->json('status') === 'success') {
             //     \Log::info('Moniepoint payment successful', [
@@ -162,7 +164,7 @@ public function initiate(Request $request): JsonResponse
                     $pendingTransaction->delete();
 
                     // Fetch the transaction with related data
-                    $transaction = Transactions::with(['beneficiary', 'transaction_products.products'])
+                    $transaction = Transactions::with(['beneficiary_info', 'transaction_products.products'])
                         ->where('transactionId', $transactionId)
                         ->firstOrFail();
 
@@ -170,10 +172,15 @@ public function initiate(Request $request): JsonResponse
                     $response = [
                         'status' => 'success',
         'message' => 'Payment request accepted by Moniepoint.',
-        'moniepointStatus' => $moniepointResponse->status(),
+        'moniepointStatus' => 202,
         'moniepointDescription' => 'Accepted',
                         'id' => $transaction->id,
-                        'beneficiary' => $transaction->beneficiary,
+                        // 'beneficiary' => $transaction->beneficiary,
+                        'beneficiary' => [
+                            'firstName' => $transaction->beneficiary_info->firstName,
+                            'lastName' => $transaction->beneficiary_info->lastName
+                        ],
+                        // 'beneficiary' => $transaction->beneficiary_info,
                         'transactionId' => $transaction->transactionId,
                         'lga' => $transaction->lga,
                         'soldBy' => $transaction->soldBy,
@@ -234,7 +241,6 @@ public function initiate(Request $request): JsonResponse
         ], 500);
     }
 }
-
     public function confirm(Request $request, string $transactionId): JsonResponse
     {
         try {

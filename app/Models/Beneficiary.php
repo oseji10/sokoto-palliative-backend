@@ -23,6 +23,7 @@ class Beneficiary extends Model
         'cadre',
         'beneficiaryType',
         'ministry',
+        'cardNumber',
         'employeeId',
     ];
     protected $primaryKey = 'beneficiaryId';
