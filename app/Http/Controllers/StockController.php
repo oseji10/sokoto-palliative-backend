@@ -29,21 +29,38 @@ class StockController extends Controller
     }
 
 
-     public function store(Request $request)
-    {
-       $validated = $request->validate([
-            'stockName' => 'required|string|max:255',
-        ]);
-
-        $stocks = Stock::create($validated);
-        return response()->json($stocks, 201); // HTTP status code 201: Created
-
-    }
-
-   public function edit(Request $request, $stockId)
+    public function store(Request $request)
 {
     $validated = $request->validate([
-        'stockName' => 'required|string|max:255',
+        'productId' => 'required|string|exists:products,productId',
+        'quantityReceived' => 'required|integer|min:1',
+    ]);
+    $user = auth()->user();
+    $stock = Stock::create([
+        'productId' => $validated['productId'],
+        'quantityReceived' => $request->quantityReceived,
+        'lgaId' => $user->staff->lga,
+        'receivedBy' => $user->id,
+    ]);
+
+    // Load the product relationship to include productName in the response
+    $stock->load('product');
+
+    return response()->json([
+        'stockId' => $stock->stockId,
+        'productId' => $stock->productId,
+        'quantityReceived' => $stock->quantityReceived,
+        'product' => $stock->product ? [
+            'productName' => $stock->product->productName
+        ] : null
+    ], 201);
+}
+
+   public function update(Request $request, $stockId)
+{
+    $validated = $request->validate([
+        'productId' => 'required|string|exists:products,productId',
+        'quantityReceived' => 'required|integer|min:1',
     ]);
 
     $stock = Stock::where('stockId', $stockId)->first();
@@ -53,9 +70,15 @@ class StockController extends Controller
 
     $stock->update($validated);
     
+     $stock->load('product');
+
     return response()->json([
         'stockId' => $stock->stockId,
-        'stockName' => $stock->stockName
+        'productId' => $stock->productId,
+        'quantityReceived' => $stock->quantityReceived,
+        'product' => $stock->product ? [
+            'productName' => $stock->product->productName
+        ] : null
     ], 200);
 }
 

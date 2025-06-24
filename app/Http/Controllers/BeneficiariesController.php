@@ -7,9 +7,11 @@ use App\Models\Beneficiary;
 use App\Models\User; 
 use App\Models\BeneficiaryType;
 use App\Models\BeneficiaryImage;
+use App\Models\Transactions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class BeneficiariesController extends Controller
 {
@@ -34,7 +36,7 @@ class BeneficiariesController extends Controller
 
     }
 
-     public function getOneBeneficiary(Request $request): JsonResponse
+    public function getOneBeneficiary(Request $request): JsonResponse
     {
         // Check if user is authenticated
         $user = auth()->user();
@@ -69,6 +71,21 @@ class BeneficiariesController extends Controller
             return response()->json(['message' => 'No beneficiary found'], 404);
         }
 
+        // Calculate total spent this week
+        $weekStart = Carbon::now()->startOfWeek();
+        $weekEnd = Carbon::now()->endOfWeek();
+        
+        $weeklyTotal = Transactions::where('beneficiary', $beneficiary->beneficiaryId)
+            ->whereBetween('created_at', [$weekStart, $weekEnd])
+            ->with('transaction_products')
+            ->get()
+            ->sum(function ($transaction) {
+                return $transaction->transaction_products->sum(function ($product) {
+                    $cost = $product->cost ? floatval($product->cost) : floatval($product->products->cost);
+                    return $cost * intval($product->quantitySold);
+                });
+            });
+
         // Format response to match frontend expectations
         $response = [
             'userId' => $beneficiary->beneficiaryId,
@@ -81,10 +98,13 @@ class BeneficiariesController extends Controller
             'department' => $beneficiary->ministry_info?->name ?? null,
             'salary' => $beneficiary->cadre_info?->salary ?? null,
             'billingSetting' => $beneficiary->beneficiary_type?->billingSetting ?? null,
+            'beneficiaryType' => $beneficiary->beneficiary_type?->typeName ?? null,
+            'weeklyTotalSpent' => number_format($weeklyTotal, 2, '.', ''),
         ];
 
         return response()->json($response);
     }
+
 
     public function beneficiaryTypes()
     {
