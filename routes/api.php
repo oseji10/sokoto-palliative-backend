@@ -84,7 +84,7 @@ use App\Http\Controllers\TransactionsController;
         Route::get('/transactions', [TransactionsController::class, 'index']);
         Route::get('/transactions/{transactionId}', [TransactionsController::class, 'show']);
         Route::post('/transactions', [TransactionsController::class, 'initiate']);
-        // Route::post('/transactions', [TransactionsController::class, 'store']);
+        Route::post('/transactions/credits', [TransactionsController::class, 'storeLoanTransactions']);
 
         Route::put('/transactions/{transactionId}/edit', [TransactionsController::class, 'update']);
         Route::delete('/transactions/{transactionId}/delete', [TransactionsController::class, 'destroy']);

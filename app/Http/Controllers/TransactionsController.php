@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Transactions;
+use App\Models\Beneficiary;
 use App\Models\TransactionProducts;
 use App\Models\PendingTransactions;
 use App\Models\Products;
@@ -14,6 +15,8 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Auth;
+
 
 class TransactionsController extends Controller
 {
@@ -241,6 +244,86 @@ public function initiate(Request $request): JsonResponse
         ], 500);
     }
 }
+
+
+ public function storeLoanTransactions(Request $request)
+    {
+        // Validating the incoming request data
+        $validator = Validator::make($request->all(), [
+            'beneficiaryId' => 'required|exists:beneficiaries,beneficiaryId',
+            'paymentMethod' => 'required|in:loan',
+            'products' => 'required|array|min:1',
+            'products.*.productId' => 'required|exists:products,productId',
+            'products.*.quantity' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // Start a database transaction
+        return DB::transaction(function () use ($request) {
+            // $users_info = 
+            $beneficiary = Beneficiary::where('beneficiaryId', $request->beneficiaryId)->first();
+            $totalCost = 0;
+
+            // Calculate total cost
+            foreach ($request->products as $productData) {
+                $product = Products::where('productId', $productData['productId'])->first();
+                if (!$product) {
+                    throw new \Exception("Product with ID {$productData['productId']} not found");
+                }
+                $totalCost += $product->cost * $productData['quantity'];
+            }
+
+            // Verify loan limit
+            $salary = 70000;
+            // $salary = floatval($beneficiary->cadre_info->salary);
+        //    return $salary = ($beneficiary->cadre_info->salary);
+            $loanLimit = $beneficiary->beneficiaryType === 'State Civil Servant' 
+                ? round($salary * 0.3333) 
+                : floatval($beneficiary->billingSetting);
+
+            // if ($totalCost > $loanLimit) {
+            //     return response()->json([
+            //         'message' => "Transaction exceeds loan limit of ₦{$loanLimit}",
+            //     ], 422);
+            // }
+
+            // Create loan transaction
+            $transaction = Transactions::create([
+                'transactionId' => Str::random(),
+                'beneficiary' => $beneficiary->id,
+                'soldBy' => Auth::id(),
+                'paymentMethod' => $request->paymentMethod,
+                'status' => 'pending',
+                'totalCost' => $totalCost,
+            ]);
+
+            // Create transaction products
+            foreach ($request->products as $productData) {
+                $product = Products::where('productId', $productData['productId'])->first();
+                TransactionProducts::create([
+                    'transactionId' => $transaction->transactionId,
+                    'productId' => $productData['productId'],
+                    'quantitySold' => $productData['quantity'],
+                    'cost' => $product->cost,
+                ]);
+            }
+
+            // Prepare response data
+            $transaction->load('transaction_products.products', 'beneficiary_info', 'seller');
+
+            return response()->json([
+                'message' => 'Loan transaction created successfully',
+                'data' => $transaction,
+            ], 201);
+        }, 5);
+    }
+
     public function confirm(Request $request, string $transactionId): JsonResponse
     {
         try {
