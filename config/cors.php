@@ -6,7 +6,7 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
-        'https://portal.sokotopalliativeshop.com.ng',
+        'https://api.makenstream.com',
         'http://localhost:3000' // optional for local testing
     ],
 
