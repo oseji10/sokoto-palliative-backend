@@ -21,7 +21,7 @@ class Stock extends Model
         'quantityExpired',
         'quantityDamaged',
         'expiryDate',
-        'lga',
+        'lgaId',
         'receivedBy',
         'status',
         'isActive',
