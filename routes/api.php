@@ -140,4 +140,7 @@ use App\Http\Controllers\TransactionsController;
         
         Route::get('analytics/total-users', [AnalyticsController::class, 'getTotalBeneficiaries']);
     });
-// });
+
+    Route::options('{any}', function () {
+    return response()->json([], 200);
+})->where('any', '.*');
