@@ -1,43 +1,22 @@
 <?php
 
 return [
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cross-Origin Resource Sharing (CORS) Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Here you may configure your settings for cross-origin resource sharing
-    | or "CORS". This determines what cross-origin operations may execute
-    | in web browsers. You are free to adjust these settings as needed.
-    |
-    | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
-    |
-    */
-
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'login', 'logout', '*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:3000', 'https://portal.sokotopalliativeshop.com.ng'],
-
-    'allowed_origins_patterns' => [],
+    'allowed_origins' => [
+        'https://portal.sokotopalliativeshop.com.ng',
+        'http://localhost:3000' // optional for local testing
+    ],
 
     'allowed_headers' => ['*'],
+
+    'supports_credentials' => true,
+
+    'allowed_origins_patterns' => [],
 
     'exposed_headers' => [],
 
     'max_age' => 0,
-
-    'supports_credentials' => true,
-
-
-//     'paths' => ['api/*'],
-// 'allowed_methods' => ['*'],
-// 'allowed_origins' => ['http://your-nextjs-app.com'],
-// 'allowed_headers' => ['*'],
-// 'exposed_headers' => [],
-// 'max_age' => 0,
-// 'supports_credentials' => true, // Allow cookies
-
 ];
